@@ -208,14 +208,25 @@ jobs:
       # ubuntu:20.04 为冻结 tag（glibc 恒为 2.31.x），无 distrotwin 滚动 tag 漂移风险；
       # 如需更强复现性可再钉 digest。
       - name: Collect arm64 dependency closure (focal container)
+        shell: bash
         run: |
           mkdir -p dist/kylin
-          docker run --rm \
+          if docker run --rm \
             -v "$PWD:/repo" -w /repo \
             ubuntu:20.04 \
             bash packaging/kylin/v10-sp1/collect-offline-closure.sh \
-              dist/kylin/closure packaging/kylin/v10-sp1/depends-seeds.txt
-          echo "闭包清单（前 20 行）:"; head -20 dist/kylin/closure/closure-manifest.txt
+              dist/kylin/closure packaging/kylin/v10-sp1/depends-seeds.txt 2>&1 | tee dist/kylin/closure.log; then
+            echo "闭包清单（前 20 行）:"; head -20 dist/kylin/closure/closure-manifest.txt
+          else
+            # 注解诊断：apt 错误行优先，兜底日志尾部（每步注解上限 10 条）
+            {
+              grep -aE 'E: |error|failed|失败|Could not|Unable' dist/kylin/closure.log | tr -d '\r' | head -7
+              echo "== tail =="
+              tail -4 dist/kylin/closure.log | tr -d '\r'
+            } > /tmp/closure-diag.txt
+            head -10 /tmp/closure-diag.txt | awk '{ i++; gsub(/%/, "%25"); print "::error title=closure-diag-" i " ::" substr($0, 1, 400) }'
+            exit 1
+          fi
 
       - name: Assemble offline deb
         id: paths
