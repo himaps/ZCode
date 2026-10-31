@@ -41,14 +41,18 @@ fi
 say "解包完成，载荷就位"
 
 # ---- 3. 离线依赖补齐（只装缺失，绝不升级） ----
-if ! "$APP_DIR/offline-deps/install-deps.sh"; then
-  fail "install-deps.sh 失败（缺依赖或复验未过）"
+if ! "$APP_DIR/offline-deps/install-deps.sh" > /tmp/install-deps.log 2>&1; then
+  grep -vE '^$' /tmp/install-deps.log | tr -d '\r' | tail -10 \
+    | awk '{ i++; gsub(/%/, "%25"); print "::error title=install-deps-" i " ::" substr($0, 1, 400) }'
+  fail "install-deps.sh 失败（缺依赖或复验未过，日志尾部见注解）"
 fi
 say "离线依赖补齐完成"
 
 # ---- 4. 配置（postinst 在此真实运行；Depends 由闭包补齐后必须能配置成功） ----
-if ! dpkg --configure -a; then
-  fail "dpkg --configure -a 失败：Depends 与闭包覆盖不一致"
+if ! dpkg --configure -a > /tmp/configure.log 2>&1; then
+  grep -vE '^$' /tmp/configure.log | tr -d '\r' | tail -10 \
+    | awk '{ i++; gsub(/%/, "%25"); print "::error title=configure-" i " ::" substr($0, 1, 400) }'
+  fail "dpkg --configure -a 失败：Depends 与闭包覆盖不一致（日志尾部见注解）"
 fi
 say "配置完成（postinst 已运行）"
 
