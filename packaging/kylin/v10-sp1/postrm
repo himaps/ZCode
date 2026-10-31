@@ -1,0 +1,13 @@
+#!/bin/sh
+# deb 维护脚本 postrm：只做缓存刷新与提示。
+# 用户数据（~/.zcode）属于用户，卸载不清理。
+set -e
+
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache -qf /usr/share/icons/hicolor >/dev/null 2>&1 || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+fi
+
+echo "I: ZCode 已卸载；用户数据目录（~/.zcode）已保留"

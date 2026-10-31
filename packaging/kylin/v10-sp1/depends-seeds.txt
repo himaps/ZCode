@@ -1,0 +1,33 @@
+# 离线闭包的 Depends 种子（focal / 麒麟 V10 SP1 aarch64 包名）。
+# 口径：Electron 主二进制 DT_NEEDED 的真实 ELF 依赖 + electron-builder 长期维护的
+# deb 运行时集合。闭包按这些种子做 apt-cache depends --recurse 递归展开；
+# deb control 的 Depends = libc6 (>= 2.31) + libgcc-s1 + libstdc++6 + 本清单。
+# dlopen 的运行库（xkbcommon、Vulkan/GL、fontconfig 等）不在 Depends，由闭包与桌面环境兜底；
+# 覆盖是否齐全由 verify job 的 ldd 门禁（零 not found）仲裁。
+libgtk-3-0
+libnotify4
+libnss3
+libxss1
+libxtst6
+libatspi2.0-0
+libuuid1
+libsecret-1-0
+libgbm1
+libasound2
+libatk-bridge2.0-0
+libatk1.0-0
+libcups2
+libdrm2
+libxkbcommon0
+libxcomposite1
+libxdamage1
+libxfixes3
+libxrandr2
+libpango-1.0-0
+libcairo2
+libgdk-pixbuf-2.0-0
+libxi6
+libxxf86vm1
+libxcb-dri3-0
+libx11-xcb1
+xdg-utils

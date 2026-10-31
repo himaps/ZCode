@@ -1,0 +1,45 @@
+#!/bin/sh
+# deb 维护脚本 postinst。运行在 dpkg 锁内——绝不能在这里嵌套 dpkg -i（红线）。
+# 职责：载荷自检（大声失败）→ 沙箱权限 → 桌面缓存刷新 → 延迟安排离线依赖补齐。
+set -e
+
+APP_DIR=/opt/ZCode
+DEPS_SH="$APP_DIR/offline-deps/install-deps.sh"
+
+# 载荷自检：应用本体/依赖补齐脚本缺失必须大声报错退出，
+# 不能让 ldd 检查被静默跳过（曾发生离线包漏拷应用本体只有闭包的事故）。
+if [ ! -x "$APP_DIR/zcode" ]; then
+  echo "E: ZCode 载荷不完整：缺少 $APP_DIR/zcode，请重新安装本 deb" >&2
+  exit 1
+fi
+if [ ! -f "$DEPS_SH" ]; then
+  echo "E: ZCode 载荷不完整：缺少 $DEPS_SH" >&2
+  exit 1
+fi
+
+# chrome-sandbox 需要 SUID 才能启用 Electron 沙箱；dpkg 保留包内权限位，这里兜底校正
+chmod 4755 "$APP_DIR/chrome-sandbox" 2>/dev/null || true
+
+# 桌面集成缓存刷新：目标机缺这些命令时静默跳过，不影响安装成功
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache -qf /usr/share/icons/hicolor >/dev/null 2>&1 || true
+fi
+if command -v xdg-mime >/dev/null 2>&1; then
+  xdg-mime default zcode.desktop x-scheme-handler/zcode >/dev/null 2>&1 || true
+fi
+
+# dpkg 全程持锁：延迟 10 秒在锁外补装缺失依赖；结果: journalctl -u zcode-deps
+# systemd-run 不可用（无 systemd / 容器 / 单元名占用）时回退为打印手动命令。
+if command -v systemd-run >/dev/null 2>&1; then
+  if systemd-run --on-active=10 --unit=zcode-deps \
+      --description="ZCode offline deps install" "$DEPS_SH" 2>/dev/null; then
+    echo "I: 10 秒后将自动补装缺失依赖，结果请查看: journalctl -u zcode-deps"
+  else
+    echo "W: 自动补装未能排队；如应用启动缺库，请手动执行: sudo $DEPS_SH"
+  fi
+else
+  echo "I: 未检测到 systemd；如应用启动缺库，请手动执行: sudo $DEPS_SH"
+fi

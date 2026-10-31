@@ -2,6 +2,11 @@
 *.mjs text eol=lf
 *.sh  text eol=lf
 
+# deb 维护脚本（无扩展名）与 CI workflow 同理：目标机 dpkg 与 GitHub Actions
+# 都按字节解析，CRLF 会让 /bin/sh shebang 或 YAML 解析在 Linux 侧失败。
+packaging/** text eol=lf
+.github/workflows/*.yml text eol=lf
+
 # schema baseline 与运行时 dump 逐字节比对；Windows autocrlf 检出成 CRLF 会被
 # db:schema:check 误报为 schema 差异并阻断 pre-push，强制 LF。
 *.baseline.sql text eol=lf
