@@ -132,22 +132,30 @@ jobs:
 
       - name: Assert linux-unpacked payload
         run: |
+          # 诊断先行（logs API 匿名 401，只能靠注解）：
+          # electron-builder 日志的 packaging 行直接带 appOutDir，注解出来即可定位。
+          grep -aE 'appOutDir|building|packaging ' electron-builder.log | tr -d '\r' | head -8 | awk '{ i++; gsub(/%/, "%25"); print "::error title=eb-log-" i " ::" substr($0, 1, 300) }' || true
           # electron-builder 26.17 跨架构（目标≠默认架构）输出目录带架构后缀：
-          # platformPackager.js computeDistOut = <platform><archSuffix>-unpacked。
-          # arm64 → linux-arm64-unpacked；旧版命名 linux-unpacked 作回退。
-          dist=packages/desktop/dist
-          if [ -d "$dist/linux-arm64-unpacked" ]; then
-            unpacked="$dist/linux-arm64-unpacked"
-          elif [ -d "$dist/linux-unpacked" ]; then
-            unpacked="$dist/linux-unpacked"
-          else
-            echo "dist 顶层内容:"; ls -la "$dist/" 2>/dev/null || true
-            echo "::error title=payload-missing-unpacked ::dist 下没有 linux-arm64-unpacked / linux-unpacked；dist 顶层见步骤日志"
-            find packages/desktop -maxdepth 2 -name dist -type d 2>/dev/null | head -5
+          # platformPackager.js computeAppOutDir = <platform><archSuffix>-unpacked。
+          # arm64 → linux-arm64-unpacked；旧版命名或根目录相对 dist 作回退候选。
+          for cand in \
+            packages/desktop/dist/linux-arm64-unpacked \
+            packages/desktop/dist/linux-unpacked \
+            dist/linux-arm64-unpacked \
+            dist/linux-unpacked; do
+            if [ -d "$cand" ]; then
+              unpacked="$cand"
+              break
+            fi
+          done
+          if [ -z "${unpacked:-}" ]; then
+            ls -la packages/desktop/dist/ 2>/dev/null | head -12 | awk '{ i++; gsub(/%/, "%25"); print "::error title=dist-list-" i " ::" substr($0, 1, 280) }'
+            find . -maxdepth 4 -type d -name '*unpacked*' -not -path '*/node_modules/*' 2>/dev/null | head -5 | awk '{ i++; gsub(/%/, "%25"); print "::error title=dist-find-" i " ::" substr($0, 1, 280) }'
+            echo "::error title=payload-missing-unpacked ::未找到 unpacked 载荷目录"
             exit 1
           fi
           echo "UNPACKED_DIR=$unpacked" >> "$GITHUB_ENV"
-          ls "$unpacked" | head -30
+          echo "unpacked=$unpacked" >> "$GITHUB_STEP_SUMMARY"
           check() {
             local label="$1" path="$2" mode="$3"
             if [ "$mode" = "x" ]; then test -x "$path" || { echo "::error title=payload-$label ::缺少或不可执行: $path"; exit 1; }
