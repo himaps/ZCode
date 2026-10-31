@@ -108,14 +108,23 @@ jobs:
         # 显式 bash = -eo pipefail：默认 shell 无 pipefail，tee 会吞掉 electron-builder
         # 的失败退出码，导致"打包成功"的假象（首轮排障教训，指南§6 同类坑）。
         shell: bash
+        env:
+          # 与 prepare-agent-node-bundle 同款防护：禁止 pnpm 在 run/exec 前自动触发
+          # 子工程 install（其 postinstall 会 electron-rebuild，打包阶段必须复用安装期产物）。
+          PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false"
         run: |
           # dir 目标不依赖 fpm/appimage 等 builder 辅助工具；复用 electron-builder.config.js
           # 的 afterPack 运行时闭包注入与 native 资源边界校验。
           # 指南§5：logs API 匿名 401，失败日志必须重发成 ::error:: 注解（title 唯一化）。
+          # cpu-features 是 ssh2 的可选原生加速（nan 头文件无法在 Electron 44 的 V8 下编译，
+          # 且本就被打包裁剪、缺失时 ssh2 自动降级）：打包前移除，避免 electron-builder 的
+          # 依赖脚本阶段对它做无谓的 node-gyp 编译并拖垮整个打包。
+          rm -rf node_modules/cpu-features
           log="$GITHUB_WORKSPACE/electron-builder.log"
           ok=0
           for attempt in 1 2 3; do
-            if pnpm --filter @zcode/desktop exec electron-builder --linux dir --arm64 2>&1 | tee "$log"; then
+            if pnpm --filter @zcode/desktop exec electron-builder \
+                --linux dir --arm64 -c.npmRebuild=false 2>&1 | tee "$log"; then
               ok=1
               break
             fi
@@ -123,12 +132,18 @@ jobs:
             sleep 15
           done
           if [ "$ok" != "1" ]; then
-            # 优先错误行；不足再补日志头尾。注解每级每步上限 10 条，title 唯一化。
-            diag=$(grep -aE '⨯|error|Error|cannot|failed|exception|ENOENT|EACCES|not found' "$log" | tr -d '\r' | head -8)
-            if [ -z "$diag" ]; then
-              diag=$(head -6 "$log" | tr -d '\r'; tail -6 "$log" | tr -d '\r')
-            fi
-            printf '%s\n' "$diag" | awk '{ i++; gsub(/%/, "%25"); print "::error title=eb-diag-" i " ::" substr($0, 1, 400) }'
+            # 诊断块：关键词行 + 首处编译错误的上下文，总计截到 10 行（GitHub 每步注解上限）
+            {
+              echo "== keyword lines =="
+              grep -aE '⨯|ERR_PNPM|gyp ERR|gyp info|cpu-features|node-pty|ssh2|rebuilding|rebuild' "$log" | tr -d '\r' | head -5
+              first=$(grep -an 'nan_callbacks\|gyp ERR\|error:' "$log" | head -1 | cut -d: -f1)
+              if [ -n "$first" ]; then
+                echo "== context of first compile error (line $first) =="
+                start=$((first > 6 ? first - 6 : 1))
+                sed -n "${start},$((first + 1))p" "$log" | tr -d '\r' | head -8
+              fi
+            } > /tmp/eb-diag.txt
+            head -10 /tmp/eb-diag.txt | awk '{ i++; gsub(/%/, "%25"); print "::error title=eb-diag-" i " ::" substr($0, 1, 400) }'
             exit 1
           fi
 
