@@ -309,12 +309,14 @@ jobs:
         with:
           platforms: arm64
 
+      # checkout 必须在 download-artifact 之前：checkout 默认 clean=true 会
+      # git clean -ffdx，把先下载的 deb 当未跟踪文件清掉。
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: kylin-v10sp1-arm64-offline-deb
           path: dist/kylin
-
-      - uses: actions/checkout@v4
 
       - name: Verify offline deb
         env:
