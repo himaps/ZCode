@@ -172,5 +172,14 @@ for seed in "${seeds[@]}"; do
   fi
 done
 
+# 关键传递依赖硬断言：gtk/pango 的直接依赖若缺失，说明递归解析或下载
+# 存在静默跳过——此时闭包必是坏的，在收集阶段就响亮失败。
+for must in libglib2.0-0 libx11-6 libxext6 libcairo2; do
+  if ! grep -q "^$must " "$manifest"; then
+    echo "[closure] E: 关键传递依赖缺失: $must（递归解析或下载异常）" >&2
+    exit 1
+  fi
+done
+
 deb_count=$(ls -1 "$OUT_DIR"/*.deb | wc -l)
 echo "[closure] 完成: debs=$deb_count seeds=${#seeds[@]} 跳过(黑名单=$skipped_blacklisted 虚包=$skipped_virtual)"
