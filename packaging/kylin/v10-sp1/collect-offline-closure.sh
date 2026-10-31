@@ -120,12 +120,18 @@ download_one() {
 
 # 单包直接依赖名集：Depends/PreDepends 行剥版本约束与尖括号，候选按 | 拆开都要
 expand_deps() {
-  apt-cache depends "$1" </dev/null 2>/dev/null \
-    | grep -E '^  (Pre)?Depends: ' \
-    | sed -E 's/^  (Pre)?Depends: //; s/ \(.*$//; s/[<>]//g' \
+  raw=$(apt-cache depends "$1" </dev/null 2>/dev/null || true)
+  deps=$(printf '%s\n' "$raw" \
+    | grep -E 'Depends: ' \
+    | sed -E 's/^[[:space:]]*Pre-Depends: /Depends: /; s/^[[:space:]]*Depends: //; s/ \(.*$//; s/[<>]//g' \
     | tr '|' '\n' \
     | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' \
-    | grep -E '^[a-zA-Z0-9][a-zA-Z0-9+.-]*$' || true
+    | grep -E '^[a-zA-Z0-9][a-zA-Z0-9+.-]*$' || true)
+  if [ -z "$deps" ] && [ -n "$raw" ]; then
+    echo "[closure] WARN: $1 的 apt-cache depends 无可解析依赖，原始输出前 5 行：" >&2
+    printf '%s\n' "$raw" | head -5 >&2
+  fi
+  printf '%s\n' "$deps"
 }
 
 cd "$OUT_DIR"
