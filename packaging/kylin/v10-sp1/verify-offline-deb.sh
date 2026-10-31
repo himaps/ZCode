@@ -53,10 +53,14 @@ for deps_try in 1 2 3; do
 done
 if [ "$deps_rc" -ne 0 ]; then
   {
-    echo "== dpkg errors (header + reason) =="
-    grep -aA1 'dpkg: error processing' /tmp/install-deps.log | tr -d '\r' | head -8
-    echo "== apt E: lines =="
-    grep -aE '^E: ' /tmp/install-deps.log | tr -d '\r' | head -2
+    echo "== closure manifest 关键包 =="
+    grep -E '^(libglib2.0-0|libxext6|libx11-6|libepoxy0|libfribidi0) ' "$APP_DIR/offline-deps/closure-manifest.txt" 2>/dev/null | head -6
+    echo "== dpkg 状态 =="
+    for p in libglib2.0-0 libxext6 libx11-6; do
+      dpkg-query -W -f="$p \${Status}\n" "$p" 2>/dev/null || echo "$p: not-registered"
+    done
+    echo "== dpkg errors =="
+    grep -aA1 'dpkg: error processing' /tmp/install-deps.log | tr -d '\r' | head -4
   } | awk '{ i++; gsub(/%/, "%25"); print "::error title=install-deps-" i " ::" substr($0, 1, 400) }'
   fail "install-deps.sh 三次未收敛（缺依赖或复验未过，日志尾部见注解）"
 fi
