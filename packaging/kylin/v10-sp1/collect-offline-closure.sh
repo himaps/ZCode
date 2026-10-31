@@ -80,78 +80,98 @@ is_blacklisted() {
   [ "$essential" -gt 0 ]
 }
 
-# ---- Depends 递归闭包：apt-cache 解析 + 逐包 apt-get download ----
+# ---- Depends 闭包：逐包单层 apt-cache depends 的 BFS 遍历 ----
 # 不用 apt-get --download-only：libc6 是 Multi-Arch: same 但跨架构共装要求双端
 # 版本一致，容器内 amd64 base libc6 与 ports arm64 libc6 版本不齐时 apt 连锁拒绝
 # （"libc6:arm64 not going to be installed"），--download-only 在此形态必然失败。
-# apt-cache depends 只解析声明依赖不做可装性判定，配完整索引即可靠。
-# 正则必须含大写：libX11-6/libXext6 等 X 库是小写正则漏网的教训。
-downloaded=0
-skipped_blacklisted=0
-skipped_virtual=0
-  # --recurse 输出里真实包名是"顶格块头行"，缩进行是依赖关系描述；
-  # <尖括号>行只标虚包（debconf-2.0 类），按尖括号提取会漏掉全部真实传递依赖。
-  # --recurse 的成员标记随 apt 版本而异：focal 是"缩进 <pkg> 尖括号行"，
-  # 新版是"顶格块头行"。两种形态取并集：多余项若是虚包/不存在，
-  # 会被既有 Version 计数跳过逻辑消化。
-  closure_pkgs=$(apt-cache depends --recurse \
-    --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \
-    "${seeds[@]}" 2>/dev/null \
-    | sed -E 's/^[[:space:]]+//; s/^<//; s/>[[:space:]]*$//' \
-    | grep -E '^[a-zA-Z0-9][a-zA-Z0-9+.-]*$' | sort -u || true)
-# 与种子取并集；缺了种子本身会在下载阶段硬失败
-all_pkgs=$(printf '%s\n%s\n' "$closure_pkgs" "$(printf '%s\n' "${seeds[@]}")" | sort -u)
-echo "[closure] 递归闭包名集: $(printf '%s\n' "$all_pkgs" | wc -l) 个（种子 ${#seeds[@]}）" >&2
-
-cd "$OUT_DIR"
-for pkg in $all_pkgs; do
-  if is_blacklisted "$pkg"; then
-    skipped_blacklisted=$((skipped_blacklisted + 1))
-    continue
-  fi
-  # 纯虚包没有可下载版本：apt-cache show 对纯虚包 rc=0 但输出里没有 Version 字段
-  # （debconf-2.0 这类 Provides 别名即属此类），其真实提供者要么在种子里、
-  # 要么是目标机必备件，跳过并记录。
-  version_lines=$(apt-cache show "$pkg" 2>/dev/null | grep -c '^Version:' || true)
-  if [ "$version_lines" -eq 0 ]; then
-    skipped_virtual=$((skipped_virtual + 1))
-    echo "[closure] 跳过虚包: $pkg" >&2
-    continue
-  fi
-  ok=0
+# 也不用 apt-cache depends --recurse：它遇到虚包会带错中止，输出被截断成
+# 单层展开（实测 76 个且缺 libglib2.0-0）。BFS 逐包查一层 Depends 天然免疫
+# 虚包中断，确定性遍历全树；虚包由 Version 计数跳过，黑名单红线照常过滤。
+download_one() {
+  pkg_b="$1"
   dl_log=/tmp/dl-one.log
   for attempt in 1 2 3; do
-    if timeout 300 apt-get download "$pkg:arm64" >"$dl_log" 2>&1; then
-      ok=1
-      break
+    if timeout 300 apt-get download "$pkg_b:arm64" >"$dl_log" 2>&1; then
+      return 0
     fi
     # "no candidate"/"Unable to locate" 属虚包/arch:all 限定问题，重试无意义
     if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
       break
     fi
-    echo "[closure] 下载重试 $attempt/3: $pkg" >&2
+    echo "[closure] 下载重试 $attempt/3: $pkg_b" >&2
     sleep $((attempt * 5))
   done
-  if [ "$ok" -ne 1 ]; then
-    # arch:all 包（xdg-utils 等）不能用 :arm64 限定选择，退回裸包名重试
-    for attempt in 1 2 3; do
-      if timeout 300 apt-get download "$pkg" >"$dl_log" 2>&1; then
-        ok=1
-        break
-      fi
-      if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
-        break
-      fi
-      echo "[closure] 裸包名下载重试 $attempt/3: $pkg" >&2
-      sleep $((attempt * 5))
-    done
-  fi
-  if [ "$ok" -ne 1 ]; then
-    skipped_virtual=$((skipped_virtual + 1))
-    echo "[closure] 跳过无可下载版本的包: $pkg" >&2
-    continue
-  fi
-  downloaded=$((downloaded + 1))
+  # arch:all 包（xdg-utils 等）不能用 :arm64 限定选择，退回裸包名重试
+  for attempt in 1 2 3; do
+    if timeout 300 apt-get download "$pkg_b" >"$dl_log" 2>&1; then
+      return 0
+    fi
+    if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
+      break
+    fi
+    echo "[closure] 裸包名下载重试 $attempt/3: $pkg_b" >&2
+    sleep $((attempt * 5))
+  done
+  return 1
+}
+
+# 单包直接依赖名集：Depends/PreDepends 行剥版本约束与尖括号，候选按 | 拆开都要
+expand_deps() {
+  apt-cache depends "$1" 2>/dev/null \
+    | grep -E '^  (Pre)?Depends: ' \
+    | sed -E 's/^  (Pre)?Depends: //; s/ \(.*$//; s/[<>]//g' \
+    | tr '|' '\n' \
+    | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' \
+    | grep -E '^[a-zA-Z0-9][a-zA-Z0-9+.-]*$' || true
+}
+
+cd "$OUT_DIR"
+seen_file=/tmp/closure-seen.txt
+frontier=/tmp/closure-frontier.txt
+: > "$seen_file"
+printf '%s\n' "${seeds[@]}" > "$frontier"
+
+depth=0
+while [ -s "$frontier" ] && [ "$depth" -lt 12 ]; do
+  depth=$((depth + 1))
+  next=/tmp/closure-next.txt
+  : > "$next"
+  frontier_count=$(grep -c . "$frontier" || true)
+  echo "[closure] BFS 深度 $depth：待处理 $frontier_count 个" >&2
+  while IFS= read -r pkg; do
+    [ -n "$pkg" ] || continue
+    if grep -qxF "$pkg" "$seen_file"; then
+      continue
+    fi
+    echo "$pkg" >> "$seen_file"
+    if is_blacklisted "$pkg"; then
+      skipped_blacklisted=$((skipped_blacklisted + 1))
+      continue
+    fi
+    # 纯虚包没有可下载版本：apt-cache show 对纯虚包 rc=0 但输出里没有 Version 字段
+    # （debconf-2.0 这类 Provides 别名即属此类），其真实提供者要么在种子里、
+    # 要么是目标机必备件，跳过并记录。
+    version_lines=$(apt-cache show "$pkg" 2>/dev/null | grep -c '^Version:' || true)
+    if [ "$version_lines" -eq 0 ]; then
+      skipped_virtual=$((skipped_virtual + 1))
+      echo "[closure] 跳过虚包: $pkg" >&2
+      continue
+    fi
+    if download_one "$pkg"; then
+      downloaded=$((downloaded + 1))
+    else
+      skipped_virtual=$((skipped_virtual + 1))
+      echo "[closure] 跳过无可下载版本的包: $pkg" >&2
+      continue
+    fi
+    # 展开直接依赖进入下一层（BFS 保证闭包完整，不受虚包中断影响）
+    expand_deps "$pkg" >> "$next"
+  done < "$frontier"
+  sort -u "$next" -o "$next"
+  # 排除已见包，避免死循环
+  next_filtered=/tmp/closure-next-filtered.txt
+  grep -vxF -f "$seen_file" "$next" > "$next_filtered" 2>/dev/null || : > "$next_filtered"
+  frontier="$next_filtered"
 done
 
 # ---- 清单：以 .deb 文件为准（包名/版本取自 deb 本身，杜绝名实不符） ----
