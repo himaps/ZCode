@@ -35,15 +35,31 @@ deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates main univers
 deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-security main universe
 EOF
 
-# 逐级降级更新：某个 suite 归档化（如 focal-security 迁走）时剔除该 suite，而不是整体失败
-if ! timeout 600 apt-get update; then
+# 先重试（runner 网络瞬断常见），重试穷尽后才逐级降级：某个 suite 归档化
+# （如 focal-security 迁走）时剔除该 suite，而不是整体失败。
+update_ok=0
+for u in 1 2 3 4 5; do
+  if timeout 600 apt-get update; then
+    update_ok=1
+    break
+  fi
+  echo "[closure] apt-get update 重试 $u/5" >&2
+  sleep 10
+done
+if [ "$update_ok" -ne 1 ]; then
   echo "[closure] 完整 update 失败，剔除 focal-security 后重试" >&2
   sed -i '/focal-security/d' /etc/apt/sources.list
   if ! timeout 600 apt-get update; then
     echo "[closure] 剔除 focal-security 仍失败，只保留 focal 主仓重试" >&2
     sed -i '/focal-updates/d' /etc/apt/sources.list
-    timeout 600 apt-get update
+    timeout 600 apt-get update || true
   fi
+fi
+# 索引完整性断言：libx11-6 只在 main/updates 里，若只剩 security（网络瞬断下
+# update 部分失败的典型残局），后续解析必然大面积 "not going to be installed"。
+if [ "$(apt-cache show libx11-6 2>/dev/null | grep -c '^Version:' || true)" -eq 0 ]; then
+  echo "[closure] E: apt 索引不完整（libx11-6 不可解析），疑似 update 部分失败后只剩 security 套件" >&2
+  exit 1
 fi
 
 # ---- 种子解析 ----

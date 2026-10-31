@@ -252,9 +252,7 @@ jobs:
           else
             # 注解诊断：apt 错误行优先，兜底日志尾部（每步注解上限 10 条）
             {
-              grep -aE 'E: |error|failed|失败|Could not|Unable' dist/kylin/closure.log | tr -d '\r' | head -7
-              echo "== tail =="
-              tail -4 dist/kylin/closure.log | tr -d '\r'
+              tail -10 dist/kylin/closure.log | tr -d '\r'
             } > /tmp/closure-diag.txt
             head -10 /tmp/closure-diag.txt | awk '{ i++; gsub(/%/, "%25"); print "::error title=closure-diag-" i " ::" substr($0, 1, 400) }'
             exit 1
