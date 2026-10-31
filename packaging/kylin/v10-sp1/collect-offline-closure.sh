@@ -94,7 +94,7 @@ download_one() {
   pkg_b="$1"
   dl_log=/tmp/dl-one.log
   for attempt in 1 2 3; do
-    if timeout 300 apt-get download "$pkg_b:arm64" >"$dl_log" 2>&1; then
+    if timeout 300 apt-get download "$pkg_b:arm64" </dev/null >"$dl_log" 2>&1; then
       return 0
     fi
     # "no candidate"/"Unable to locate" 属虚包/arch:all 限定问题，重试无意义
@@ -106,7 +106,7 @@ download_one() {
   done
   # arch:all 包（xdg-utils 等）不能用 :arm64 限定选择，退回裸包名重试
   for attempt in 1 2 3; do
-    if timeout 300 apt-get download "$pkg_b" >"$dl_log" 2>&1; then
+    if timeout 300 apt-get download "$pkg_b" </dev/null >"$dl_log" 2>&1; then
       return 0
     fi
     if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
@@ -120,7 +120,7 @@ download_one() {
 
 # 单包直接依赖名集：Depends/PreDepends 行剥版本约束与尖括号，候选按 | 拆开都要
 expand_deps() {
-  apt-cache depends "$1" 2>/dev/null \
+  apt-cache depends "$1" </dev/null 2>/dev/null \
     | grep -E '^  (Pre)?Depends: ' \
     | sed -E 's/^  (Pre)?Depends: //; s/ \(.*$//; s/[<>]//g' \
     | tr '|' '\n' \
@@ -154,7 +154,7 @@ while [ -s "$frontier" ] && [ "$depth" -lt 12 ]; do
     # 纯虚包没有可下载版本：apt-cache show 对纯虚包 rc=0 但输出里没有 Version 字段
     # （debconf-2.0 这类 Provides 别名即属此类），其真实提供者要么在种子里、
     # 要么是目标机必备件，跳过并记录。
-    version_lines=$(apt-cache show "$pkg" 2>/dev/null | grep -c '^Version:' || true)
+    version_lines=$(apt-cache show "$pkg" </dev/null 2>/dev/null | grep -c '^Version:' || true)
     if [ "$version_lines" -eq 0 ]; then
       skipped_virtual=$((skipped_virtual + 1))
       echo "[closure] 跳过虚包: $pkg" >&2
