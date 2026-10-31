@@ -132,14 +132,21 @@ jobs:
 
       - name: Assert linux-unpacked payload
         run: |
-          # 断言失败时先展开 dist 布局并发注解，避免只能靠猜（logs API 匿名不可读）
-          unpacked=packages/desktop/dist/linux-unpacked
-          if [ ! -d "$unpacked" ]; then
-            echo "dist 顶层内容:"; ls -la packages/desktop/dist/ 2>/dev/null || true
-            echo "::error title=payload-missing-unpacked ::$unpacked 不存在；dist 顶层见步骤日志"
+          # electron-builder 26.17 跨架构（目标≠默认架构）输出目录带架构后缀：
+          # platformPackager.js computeDistOut = <platform><archSuffix>-unpacked。
+          # arm64 → linux-arm64-unpacked；旧版命名 linux-unpacked 作回退。
+          dist=packages/desktop/dist
+          if [ -d "$dist/linux-arm64-unpacked" ]; then
+            unpacked="$dist/linux-arm64-unpacked"
+          elif [ -d "$dist/linux-unpacked" ]; then
+            unpacked="$dist/linux-unpacked"
+          else
+            echo "dist 顶层内容:"; ls -la "$dist/" 2>/dev/null || true
+            echo "::error title=payload-missing-unpacked ::dist 下没有 linux-arm64-unpacked / linux-unpacked；dist 顶层见步骤日志"
             find packages/desktop -maxdepth 2 -name dist -type d 2>/dev/null | head -5
             exit 1
           fi
+          echo "UNPACKED_DIR=$unpacked" >> "$GITHUB_ENV"
           ls "$unpacked" | head -30
           check() {
             local label="$1" path="$2" mode="$3"
@@ -167,7 +174,7 @@ jobs:
         id: paths
         run: |
           bash packaging/kylin/v10-sp1/build-offline-deb.sh \
-            packages/desktop/dist/linux-unpacked \
+            "${UNPACKED_DIR:?assert 步骤未解析出载荷目录}" \
             dist/kylin/closure \
             "${{ steps.version.outputs.version }}" \
             dist/kylin
