@@ -79,25 +79,31 @@ seeds_q=$(printf ' %s' "${seeds[@]/%/:arm64}")
 if timeout 900 apt-get -y --download-only --no-install-recommends \
     -o Dir::Cache::archives="$dl_cache" \
     install $seeds_q >"$dl_log" 2>&1; then
-  # 收割下载结果：黑名单（红线）与 amd64/i386 杂质包一律不入闭包
-  harvested=0
-  for deb in "$dl_cache"/*.deb; do
-    [ -e "$deb" ] || continue
-    pkg=$(dpkg-deb -f "$deb" Package)
-    arch=$(dpkg-deb -f "$deb" Architecture)
-    if [ "$arch" != "arm64" ] && [ "$arch" != "all" ]; then
-      echo "[closure] 跳过非 arm64 下载杂质: $pkg ($arch)" >&2
-      continue
-    fi
-    if is_blacklisted "$pkg"; then
-      skipped_blacklisted=$((skipped_blacklisted + 1))
-      continue
-    fi
-    mv "$deb" "$OUT_DIR/"
-    harvested=$((harvested + 1))
-  done
-  echo "[closure] apt-get --download-only 闭包: $harvested 个" >&2
+  echo "[closure] --download-only 解析成功" >&2
+else
+  # 失败原因必须可见（CI 注解只采步骤日志，dl_log 在 /tmp 不可见）
+  echo "[closure] --download-only 失败，日志尾部：" >&2
+  tail -12 "$dl_log" >&2 || true
 fi
+# 收割下载结果（--download-only 部分失败时也收割已下载部分）：
+# 黑名单（红线）与 amd64/i386 杂质包一律不入闭包
+harvested=0
+for deb in "$dl_cache"/*.deb; do
+  [ -e "$deb" ] || continue
+  pkg=$(dpkg-deb -f "$deb" Package)
+  arch=$(dpkg-deb -f "$deb" Architecture)
+  if [ "$arch" != "arm64" ] && [ "$arch" != "all" ]; then
+    echo "[closure] 跳过非 arm64 下载杂质: $pkg ($arch)" >&2
+    continue
+  fi
+  if is_blacklisted "$pkg"; then
+    skipped_blacklisted=$((skipped_blacklisted + 1))
+    continue
+  fi
+  mv "$deb" "$OUT_DIR/"
+  harvested=$((harvested + 1))
+done
+echo "[closure] apt-get --download-only 闭包: $harvested 个" >&2
 
 deb_count_now=$(ls -1 "$OUT_DIR"/*.deb 2>/dev/null | wc -l)
 if [ "$deb_count_now" -eq 0 ]; then
