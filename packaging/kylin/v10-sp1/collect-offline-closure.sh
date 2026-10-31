@@ -16,6 +16,8 @@ SEEDS_FILE="${2:?usage: collect-offline-closure.sh <out-dir> <seeds-file>}"
 
 export DEBIAN_FRONTEND=noninteractive
 mkdir -p "$OUT_DIR"
+# 后续会 cd 进 OUT_DIR 逐包下载，清单等路径必须绝对化，否则相对路径错位
+OUT_DIR=$(cd "$OUT_DIR" && pwd)
 
 # ---- focal 已过标准支持期 + 云上网络：apt 必须限时，否则会挂死几十分钟 ----
 cat > /etc/apt/apt.conf.d/95zcode-offline <<'EOF'
@@ -99,7 +101,7 @@ for pkg in $all_pkgs; do
       ok=1
       break
     fi
-    # "no candidate"/"Unable to locate" 属虚包/缺名，重试无意义，降级为跳过
+    # "no candidate"/"Unable to locate" 属虚包/arch:all 限定问题，重试无意义
     if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
       break
     fi
@@ -107,16 +109,24 @@ for pkg in $all_pkgs; do
     sleep $((attempt * 5))
   done
   if [ "$ok" -ne 1 ]; then
-    if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
-      skipped_virtual=$((skipped_virtual + 1))
-      echo "[closure] 跳过无可下载版本的包: $pkg" >&2
-      rm -f "$dl_log"
-      continue
-    fi
-    echo "[closure] E: 下载失败: $pkg" >&2
-    tail -3 "$dl_log" >&2 || true
+    # arch:all 包（xdg-utils 等）不能用 :arm64 限定选择，退回裸包名重试
+    for attempt in 1 2 3; do
+      if timeout 300 apt-get download "$pkg" >"$dl_log" 2>&1; then
+        ok=1
+        break
+      fi
+      if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
+        break
+      fi
+      echo "[closure] 裸包名下载重试 $attempt/3: $pkg" >&2
+      sleep $((attempt * 5))
+    done
+  fi
+  if [ "$ok" -ne 1 ]; then
+    skipped_virtual=$((skipped_virtual + 1))
+    echo "[closure] 跳过无可下载版本的包: $pkg" >&2
     rm -f "$dl_log"
-    exit 1
+    continue
   fi
   rm -f "$dl_log"
   downloaded=$((downloaded + 1))

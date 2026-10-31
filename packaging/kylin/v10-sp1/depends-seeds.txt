@@ -25,7 +25,7 @@ libxfixes3
 libxrandr2
 libpango-1.0-0
 libcairo2
-libgdk-pixbuf-2.0-0
+libgdk-pixbuf2.0-0
 libxi6
 libxxf86vm1
 libxcb-dri3-0
