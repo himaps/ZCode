@@ -52,8 +52,12 @@ for deps_try in 1 2 3; do
   sleep 5
 done
 if [ "$deps_rc" -ne 0 ]; then
-  grep -vE '^$' /tmp/install-deps.log | tr -d '\r' | tail -10 \
-    | awk '{ i++; gsub(/%/, "%25"); print "::error title=install-deps-" i " ::" substr($0, 1, 400) }'
+  {
+    echo "== dpkg errors =="
+    grep -aE 'dpkg: error|E: |error processing|出错' /tmp/install-deps.log | tr -d '\r' | head -6
+    echo "== ldd missing tail =="
+    tail -5 /tmp/install-deps.log | tr -d '\r'
+  } | awk '{ i++; gsub(/%/, "%25"); print "::error title=install-deps-" i " ::" substr($0, 1, 400) }'
   fail "install-deps.sh 三次未收敛（缺依赖或复验未过，日志尾部见注解）"
 fi
 say "离线依赖补齐完成"
