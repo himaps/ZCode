@@ -120,6 +120,13 @@ jobs:
           # 且本就被打包裁剪、缺失时 ssh2 自动降级）：打包前移除，避免 electron-builder 的
           # 依赖脚本阶段对它做无谓的 node-gyp 编译并拖垮整个打包。
           rm -rf node_modules/cpu-features
+          # 载荷卫生：ubuntu-latest 已迁移 Ubuntu 26（glibc 2.42），install 期宿主编译产物
+          # 绝不能进包（glibc 门禁实测 2.42/2.34 超标）。目标平台的 arm64 预编译
+          # （@lydell/node-pty-linux-arm64，2.28）由 electron-builder beforePack 恢复：
+          # - node-pty 的 build/ 与 bin/ 是宿主 electron-rebuild 产物，运行时只加载 prebuilds/
+          # - ssh2 的 sshcrypto.node 同理，缺失时 ssh2 纯 JS 自动降级
+          rm -rf node_modules/node-pty/build node_modules/node-pty/bin
+          rm -f node_modules/ssh2/lib/protocol/crypto/build/Release/sshcrypto.node
           log="$GITHUB_WORKSPACE/electron-builder.log"
           ok=0
           for attempt in 1 2 3; do
