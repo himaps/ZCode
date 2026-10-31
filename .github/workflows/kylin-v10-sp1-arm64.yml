@@ -188,6 +188,13 @@ jobs:
           fi
           echo "UNPACKED_DIR=$unpacked" >> "$GITHUB_ENV"
           echo "unpacked=$unpacked" >> "$GITHUB_STEP_SUMMARY"
+          # 资产链路诊断（logs API 匿名不可读，只能注解）：staging 与 builder 拷贝两段各自可见
+          {
+            echo "== bundled-agents staging =="
+            find packages/desktop/bundled-agents -maxdepth 3 2>/dev/null | head -5
+            echo "== unpacked resources =="
+            ls "$unpacked/resources" 2>/dev/null | head -5
+          } | awk '{ i++; gsub(/%/, "%25"); print "::error title=assets-" i " ::" substr($0, 1, 300) }'
           if [ ! -x "$unpacked/zcode" ]; then
             # 可执行名未按 executableName=zcode 生成时，列出目录并把事实发注解；
             # electron-builder 26.17 的 dir 目标实测沿用包名默认（@zcodedesktop），
