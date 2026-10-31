@@ -53,10 +53,10 @@ for deps_try in 1 2 3; do
 done
 if [ "$deps_rc" -ne 0 ]; then
   {
-    echo "== ldd missing tail =="
-    tail -10 /tmp/install-deps.log | tr -d '\r'
-    echo "== manifest 行数 =="
-    wc -l < "$APP_DIR/offline-deps/closure-manifest.txt" 2>/dev/null
+    echo "== install-deps tail =="
+    tail -8 /tmp/install-deps.log 2>/dev/null | tr -d '\r'
+    echo "== dpkg log tail =="
+    tail -6 /tmp/zcode-deps-dpkg.log 2>/dev/null | tr -d '\r'
   } | awk '{ i++; gsub(/%/, "%25"); print "::error title=install-deps-" i " ::" substr($0, 1, 400) }'
   fail "install-deps.sh 三次未收敛（缺依赖或复验未过，日志尾部见注解）"
 fi
