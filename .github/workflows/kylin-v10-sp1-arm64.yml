@@ -127,6 +127,20 @@ jobs:
           # - ssh2 的 sshcrypto.node 同理，缺失时 ssh2 纯 JS 自动降级
           rm -rf node_modules/node-pty/build node_modules/node-pty/bin
           rm -f node_modules/ssh2/lib/protocol/crypto/build/Release/sshcrypto.node
+          # ---- 交叉 staging 复位（本步内联 export，确保子进程一定拿到目标架构）----
+          # 实测 runner 上 step 8 的 prepare 曾把 bundled-agents/bundled-tools 落到
+          # linux-x64（宿主架构回退），导致 extraResources 的 glm/tools 缺失或装错架构。
+          # 打包前在同一步重跑 staging 并硬断言产物落位。
+          export ZCODE_ENV=production
+          export ZCODE_TARGET_OS=linux
+          export ZCODE_TARGET_ARCH=arm64
+          echo "staging env: ZCODE_TARGET_OS=$ZCODE_TARGET_OS ZCODE_TARGET_ARCH=$ZCODE_TARGET_ARCH"
+          (cd packages/desktop && pnpm run prepare:agent-bundle)
+          (cd packages/desktop && pnpm run prepare:native-search)
+          test -f packages/desktop/bundled-agents/linux-arm64/glm/zcode.cjs \
+            || { echo "::error title=staging-glm ::agent bundle 未落到 bundled-agents/linux-arm64"; exit 1; }
+          test -x packages/desktop/bundled-tools/linux-arm64/bfs \
+            || { echo "::error title=staging-tools ::native tools 未落到 bundled-tools/linux-arm64"; exit 1; }
           log="$GITHUB_WORKSPACE/electron-builder.log"
           ok=0
           for attempt in 1 2 3; do
