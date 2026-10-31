@@ -91,9 +91,14 @@ skipped_blacklisted=0
 skipped_virtual=0
   # --recurse 输出里真实包名是"顶格块头行"，缩进行是依赖关系描述；
   # <尖括号>行只标虚包（debconf-2.0 类），按尖括号提取会漏掉全部真实传递依赖。
+  # --recurse 的成员标记随 apt 版本而异：focal 是"缩进 <pkg> 尖括号行"，
+  # 新版是"顶格块头行"。两种形态取并集：多余项若是虚包/不存在，
+  # 会被既有 Version 计数跳过逻辑消化。
   closure_pkgs=$(apt-cache depends --recurse \
     --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \
-    "${seeds[@]}" 2>/dev/null | grep -E '^[a-zA-Z0-9][a-zA-Z0-9+.-]*$' | sort -u || true)
+    "${seeds[@]}" 2>/dev/null \
+    | sed -E 's/^[[:space:]]+//; s/^<//; s/>[[:space:]]*$//' \
+    | grep -E '^[a-zA-Z0-9][a-zA-Z0-9+.-]*$' | sort -u || true)
 # 与种子取并集；缺了种子本身会在下载阶段硬失败
 all_pkgs=$(printf '%s\n%s\n' "$closure_pkgs" "$(printf '%s\n' "${seeds[@]}")" | sort -u)
 echo "[closure] 递归闭包名集: $(printf '%s\n' "$all_pkgs" | wc -l) 个（种子 ${#seeds[@]}）" >&2
