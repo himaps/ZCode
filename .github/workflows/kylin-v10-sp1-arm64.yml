@@ -97,11 +97,13 @@ jobs:
         run: pnpm --filter @zcode/desktop build
 
       - name: Package with electron-builder (dir target)
+        # 显式 bash = -eo pipefail：默认 shell 无 pipefail，tee 会吞掉 electron-builder
+        # 的失败退出码，导致"打包成功"的假象（首轮排障教训，指南§6 同类坑）。
+        shell: bash
         run: |
           # dir 目标不依赖 fpm/appimage 等 builder 辅助工具；复用 electron-builder.config.js
           # 的 afterPack 运行时闭包注入与 native 资源边界校验。
-          # 指南§5：logs API 匿名 401，失败日志尾部必须重发成 ::error:: 注解（title 唯一化）
-          # 才能匿名诊断；完整日志随 artifact 留存。
+          # 指南§5：logs API 匿名 401，失败日志必须重发成 ::error:: 注解（title 唯一化）。
           log="$GITHUB_WORKSPACE/electron-builder.log"
           ok=0
           for attempt in 1 2 3; do
@@ -113,12 +115,12 @@ jobs:
             sleep 15
           done
           if [ "$ok" != "1" ]; then
-            # 优先取错误关键词行；没有命中再取日志末尾。注解每级每步上限 10 条，title 唯一化。
-            diag=$(tail -40 "$log" | tr -d '\r' | grep -iE 'error|cannot|failed|exception|ENOENT|EACCES|not found|ELIFECYCLE' | tail -10)
+            # 优先错误行；不足再补日志头尾。注解每级每步上限 10 条，title 唯一化。
+            diag=$(grep -aE '⨯|error|Error|cannot|failed|exception|ENOENT|EACCES|not found' "$log" | tr -d '\r' | head -8)
             if [ -z "$diag" ]; then
-              diag=$(tail -10 "$log" | tr -d '\r')
+              diag=$(head -6 "$log" | tr -d '\r'; tail -6 "$log" | tr -d '\r')
             fi
-            printf '%s\n' "$diag" | awk '{ i++; gsub(/%/, "%25"); print "::error title=electron-builder-diag-" i " ::" substr($0, 1, 400) }'
+            printf '%s\n' "$diag" | awk '{ i++; gsub(/%/, "%25"); print "::error title=eb-diag-" i " ::" substr($0, 1, 400) }'
             exit 1
           fi
 
