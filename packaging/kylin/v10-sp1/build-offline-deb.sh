@@ -148,7 +148,8 @@ assert_entry "chrome-sandbox" '\./opt/ZCode/chrome-sandbox$'
 assert_entry "依赖补齐脚本" '\./opt/ZCode/offline-deps/install-deps\.sh$'
 assert_entry "agent bundle (resources/glm)" '\./opt/ZCode/resources/glm/'
 assert_entry "内置搜索工具 (resources/tools)" '\./opt/ZCode/resources/tools/'
-assert_entry "命令行入口 /usr/bin/zcode" '\./usr/bin/zcode$'
+# 符号链接行格式为 "./usr/bin/zcode -> /opt/ZCode/zcode"，不能锚定行尾
+assert_entry "命令行入口 /usr/bin/zcode" '\./usr/bin/zcode'
 assert_entry "desktop 文件" '\./usr/share/applications/zcode\.desktop$'
 assert_entry "hicolor 图标" '\./usr/share/icons/hicolor/512x512/apps/zcode\.png$'
 packed_debs=$(printf '%s\n' "$listing" | grep -c '\./opt/ZCode/offline-deps/.*\.deb$' || true)
