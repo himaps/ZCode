@@ -89,9 +89,11 @@ is_blacklisted() {
 downloaded=0
 skipped_blacklisted=0
 skipped_virtual=0
-closure_pkgs=$(apt-cache depends --recurse \
-  --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \
-  "${seeds[@]}" 2>/dev/null | grep -oE '<[a-zA-Z0-9][a-zA-Z0-9+.-]*>' | tr -d '<>' | sort -u || true)
+  # --recurse 输出里真实包名是"顶格块头行"，缩进行是依赖关系描述；
+  # <尖括号>行只标虚包（debconf-2.0 类），按尖括号提取会漏掉全部真实传递依赖。
+  closure_pkgs=$(apt-cache depends --recurse \
+    --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \
+    "${seeds[@]}" 2>/dev/null | grep -E '^[a-zA-Z0-9][a-zA-Z0-9+.-]*$' | sort -u || true)
 # 与种子取并集；缺了种子本身会在下载阶段硬失败
 all_pkgs=$(printf '%s\n%s\n' "$closure_pkgs" "$(printf '%s\n' "${seeds[@]}")" | sort -u)
 echo "[closure] 递归闭包名集: $(printf '%s\n' "$all_pkgs" | wc -l) 个（种子 ${#seeds[@]}）" >&2
