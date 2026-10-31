@@ -81,6 +81,9 @@ is_blacklisted() {
 }
 
 # ---- Depends 闭包：逐包单层 apt-cache depends 的 BFS 遍历 ----
+downloaded=0
+skipped_blacklisted=0
+skipped_virtual=0
 # 不用 apt-get --download-only：libc6 是 Multi-Arch: same 但跨架构共装要求双端
 # 版本一致，容器内 amd64 base libc6 与 ports arm64 libc6 版本不齐时 apt 连锁拒绝
 # （"libc6:arm64 not going to be installed"），--download-only 在此形态必然失败。
