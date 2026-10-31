@@ -132,9 +132,23 @@ jobs:
 
       - name: Assert linux-unpacked payload
         run: |
-          test -x packages/desktop/dist/linux-unpacked/zcode
-          test -f packages/desktop/dist/linux-unpacked/resources/app.asar
-          test -f packages/desktop/dist/linux-unpacked/chrome-sandbox
+          # 断言失败时先展开 dist 布局并发注解，避免只能靠猜（logs API 匿名不可读）
+          unpacked=packages/desktop/dist/linux-unpacked
+          if [ ! -d "$unpacked" ]; then
+            echo "dist 顶层内容:"; ls -la packages/desktop/dist/ 2>/dev/null || true
+            echo "::error title=payload-missing-unpacked ::$unpacked 不存在；dist 顶层见步骤日志"
+            find packages/desktop -maxdepth 2 -name dist -type d 2>/dev/null | head -5
+            exit 1
+          fi
+          ls "$unpacked" | head -30
+          check() {
+            local label="$1" path="$2" mode="$3"
+            if [ "$mode" = "x" ]; then test -x "$path" || { echo "::error title=payload-$label ::缺少或不可执行: $path"; exit 1; }
+            else test -f "$path" || { echo "::error title=payload-$label ::缺少文件: $path"; exit 1; }; fi
+          }
+          check zcode "$unpacked/zcode" x
+          check app-asar "$unpacked/resources/app.asar" f
+          check chrome-sandbox "$unpacked/chrome-sandbox" f
 
       # ---- focal amd64 容器内下载 arm64 离线依赖闭包 ----
       # ubuntu:20.04 为冻结 tag（glibc 恒为 2.31.x），无 distrotwin 滚动 tag 漂移风险；
