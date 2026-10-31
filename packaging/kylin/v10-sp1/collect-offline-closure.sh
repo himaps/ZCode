@@ -123,7 +123,7 @@ expand_deps() {
   raw=$(apt-cache depends "$1" </dev/null 2>/dev/null || true)
   deps=$(printf '%s\n' "$raw" \
     | grep -E 'Depends: ' \
-    | sed -E 's/^[[:space:]]*Pre-Depends: /Depends: /; s/^[[:space:]]*Depends: //; s/ \(.*$//; s/[<>]//g' \
+    | sed -E 's/^[[:space:]]*Pre-Depends: /Depends: /; s/^[[:space:]]*Depends: //; s/ \(.*$//; s/[<>]//g; s/:[a-z0-9]+$//' \
     | tr '|' '\n' \
     | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' \
     | grep -E '^[a-zA-Z0-9][a-zA-Z0-9+.-]*$' || true)
