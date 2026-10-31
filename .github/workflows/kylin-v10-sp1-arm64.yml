@@ -96,6 +96,14 @@ jobs:
       - name: Build desktop app (linux/arm64)
         run: pnpm --filter @zcode/desktop build
 
+      - name: Inject app version into desktop package.json
+        run: |
+          # electron-builder 26.17 的 checkMetadata 直接读原始 package.json 的 version，
+          # config 顶级 extraMetadata 注入在该阶段失效（26.8.1 尚可，升级回归）。
+          # CI 内临时注入不落库；files: ["package.json"] 会把版本打进 asar，app.getVersion() 正常。
+          node -e "const fs=require('fs');const f='packages/desktop/package.json';const p=JSON.parse(fs.readFileSync(f,'utf8'));p.version='${{ steps.version.outputs.version }}';fs.writeFileSync(f, JSON.stringify(p,null,2)+'\n')"
+          node -p "require('./packages/desktop/package.json').version"
+
       - name: Package with electron-builder (dir target)
         # 显式 bash = -eo pipefail：默认 shell 无 pipefail，tee 会吞掉 electron-builder
         # 的失败退出码，导致"打包成功"的假象（首轮排障教训，指南§6 同类坑）。
