@@ -64,80 +64,114 @@ is_blacklisted() {
   [ "$essential" -gt 0 ]
 }
 
-# ---- Depends 递归展开：--recurse 输出的 <pkg> 行即传递闭包成员 ----
-closure_pkgs=$(apt-cache depends --recurse \
-  --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \
-  "${seeds[@]}" 2>/dev/null | grep -oE '<[a-z0-9][a-z0-9+.-]*>' | tr -d '<>' | sort -u || true)
-# 与种子取并集；缺了种子本身会在下载阶段硬失败
-all_pkgs=$(printf '%s\n%s\n' "$closure_pkgs" "$(printf '%s\n' "${seeds[@]}")" | sort -u)
+# ---- Depends 递归闭包 ----
+downloaded=0
+skipped_blacklisted=0
+skipped_virtual=0
+# 主路径：apt-get --download-only 由 apt 原生解析整棵依赖树（含 Pre-Depends 与
+# arch:all），下载到独立缓存目录，绝不安装。
+# 回退路径：apt-cache depends --recurse 解析闭包名集后逐包下载（正则须含大写，
+# libX11-6/libXext6 等X 库全是小写正则漏网的教训）。
+dl_cache=/tmp/aptcache
+mkdir -p "$dl_cache"
+dl_log=/tmp/apt-download-only.log
+seeds_q=$(printf ' %s' "${seeds[@]/%/:arm64}")
+if timeout 900 apt-get -y --download-only --no-install-recommends \
+    -o Dir::Cache::archives="$dl_cache" \
+    install $seeds_q >"$dl_log" 2>&1; then
+  # 收割下载结果：黑名单（红线）与 amd64/i386 杂质包一律不入闭包
+  harvested=0
+  for deb in "$dl_cache"/*.deb; do
+    [ -e "$deb" ] || continue
+    pkg=$(dpkg-deb -f "$deb" Package)
+    arch=$(dpkg-deb -f "$deb" Architecture)
+    if [ "$arch" != "arm64" ] && [ "$arch" != "all" ]; then
+      echo "[closure] 跳过非 arm64 下载杂质: $pkg ($arch)" >&2
+      continue
+    fi
+    if is_blacklisted "$pkg"; then
+      skipped_blacklisted=$((skipped_blacklisted + 1))
+      continue
+    fi
+    mv "$deb" "$OUT_DIR/"
+    harvested=$((harvested + 1))
+  done
+  echo "[closure] apt-get --download-only 闭包: $harvested 个" >&2
+fi
 
+deb_count_now=$(ls -1 "$OUT_DIR"/*.deb 2>/dev/null | wc -l)
+if [ "$deb_count_now" -eq 0 ]; then
+  # ---- 回退路径：apt-cache depends --recurse 解析闭包名集后逐包下载 ----
+  echo "[closure] --download-only 未产出，回退 apt-cache depends --recurse" >&2
+  closure_pkgs=$(apt-cache depends --recurse \
+    --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \
+    "${seeds[@]}" 2>/dev/null | grep -oE '<[a-zA-Z0-9][a-zA-Z0-9+.-]*>' | tr -d '<>' | sort -u || true)
+  # 与种子取并集；缺了种子本身会在下载阶段硬失败
+  all_pkgs=$(printf '%s\n%s\n' "$closure_pkgs" "$(printf '%s\n' "${seeds[@]}")" | sort -u)
+  echo "[closure] 回退路径闭包名集: $(printf '%s\n' "$all_pkgs" | wc -l) 个" >&2
+
+  cd "$OUT_DIR"
+  for pkg in $all_pkgs; do
+    if is_blacklisted "$pkg"; then
+      skipped_blacklisted=$((skipped_blacklisted + 1))
+      continue
+    fi
+    # 纯虚包没有可下载版本：apt-cache show 对纯虚包 rc=0 但输出里没有 Version 字段
+    # （debconf-2.0 这类 Provides 别名即属此类），其真实提供者要么在种子里、
+    # 要么是目标机必备件，跳过并记录。
+    version_lines=$(apt-cache show "$pkg" 2>/dev/null | grep -c '^Version:' || true)
+    if [ "$version_lines" -eq 0 ]; then
+      skipped_virtual=$((skipped_virtual + 1))
+      echo "[closure] 跳过虚包: $pkg" >&2
+      continue
+    fi
+    ok=0
+    dl_log=/tmp/dl-one.log
+    for attempt in 1 2 3; do
+      if timeout 300 apt-get download "$pkg:arm64" >"$dl_log" 2>&1; then
+        ok=1
+        break
+      fi
+      # "no candidate"/"Unable to locate" 属虚包/arch:all 限定问题，重试无意义
+      if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
+        break
+      fi
+      echo "[closure] 下载重试 $attempt/3: $pkg" >&2
+      sleep $((attempt * 5))
+    done
+    if [ "$ok" -ne 1 ]; then
+      # arch:all 包（xdg-utils 等）不能用 :arm64 限定选择，退回裸包名重试
+      for attempt in 1 2 3; do
+        if timeout 300 apt-get download "$pkg" >"$dl_log" 2>&1; then
+          ok=1
+          break
+        fi
+        if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
+          break
+        fi
+        echo "[closure] 裸包名下载重试 $attempt/3: $pkg" >&2
+        sleep $((attempt * 5))
+      done
+    fi
+    if [ "$ok" -ne 1 ]; then
+      skipped_virtual=$((skipped_virtual + 1))
+      echo "[closure] 跳过无可下载版本的包: $pkg" >&2
+      continue
+    fi
+    downloaded=$((downloaded + 1))
+  done
+fi
+
+# ---- 清单：以 .deb 文件为准（包名/版本取自 deb 本身，杜绝名实不符） ----
 manifest="$OUT_DIR/closure-manifest.txt"
 packages_list="$OUT_DIR/closure-packages.txt"
 : > "$manifest"
 : > "$packages_list"
-
-cd "$OUT_DIR"
-downloaded=0
-skipped_blacklisted=0
-skipped_virtual=0
-for pkg in $all_pkgs; do
-  if is_blacklisted "$pkg"; then
-    skipped_blacklisted=$((skipped_blacklisted + 1))
-    continue
-  fi
-  # 纯虚包没有可下载版本：apt-cache show 对纯虚包 rc=0 但输出里没有 Version 字段
-  # （debconf-2.0 这类 Provides 别名即属此类），其真实提供者要么在种子里、
-  # 要么是目标机必备件，跳过并记录。
-  version_lines=$(apt-cache show "$pkg" 2>/dev/null | grep -c '^Version:' || true)
-  if [ "$version_lines" -eq 0 ]; then
-    skipped_virtual=$((skipped_virtual + 1))
-    echo "[closure] 跳过虚包: $pkg" >&2
-    continue
-  fi
-  ok=0
-  dl_log=$(mktemp)
-  for attempt in 1 2 3; do
-    if timeout 300 apt-get download "$pkg:arm64" >"$dl_log" 2>&1; then
-      ok=1
-      break
-    fi
-    # "no candidate"/"Unable to locate" 属虚包/arch:all 限定问题，重试无意义
-    if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
-      break
-    fi
-    echo "[closure] 下载重试 $attempt/3: $pkg" >&2
-    sleep $((attempt * 5))
-  done
-  if [ "$ok" -ne 1 ]; then
-    # arch:all 包（xdg-utils 等）不能用 :arm64 限定选择，退回裸包名重试
-    for attempt in 1 2 3; do
-      if timeout 300 apt-get download "$pkg" >"$dl_log" 2>&1; then
-        ok=1
-        break
-      fi
-      if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
-        break
-      fi
-      echo "[closure] 裸包名下载重试 $attempt/3: $pkg" >&2
-      sleep $((attempt * 5))
-    done
-  fi
-  if [ "$ok" -ne 1 ]; then
-    skipped_virtual=$((skipped_virtual + 1))
-    echo "[closure] 跳过无可下载版本的包: $pkg" >&2
-    rm -f "$dl_log"
-    continue
-  fi
-  rm -f "$dl_log"
-  downloaded=$((downloaded + 1))
-done
-
-# ---- 清单：以 .deb 文件为准（包名/版本取自 deb 本身，杜绝名实不符） ----
-for deb in ./*.deb; do
+for deb in "$OUT_DIR"/*.deb; do
   [ -e "$deb" ] || continue
   pkg=$(dpkg-deb -f "$deb" Package)
   ver=$(dpkg-deb -f "$deb" Version)
-  echo "$pkg $ver $deb" >> "$manifest"
+  echo "$pkg $ver $(basename "$deb")" >> "$manifest"
   echo "$pkg" >> "$packages_list"
 done
 sort -o "$manifest" "$manifest"
@@ -151,5 +185,5 @@ for seed in "${seeds[@]}"; do
   fi
 done
 
-deb_count=$(ls -1 ./*.deb | wc -l)
+deb_count=$(ls -1 "$OUT_DIR"/*.deb | wc -l)
 echo "[closure] 完成: debs=$deb_count seeds=${#seeds[@]} 跳过(黑名单=$skipped_blacklisted 虚包=$skipped_virtual)"

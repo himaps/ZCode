@@ -40,11 +40,21 @@ fi
 [ -x "$APP_DIR/zcode" ] || fail "解包后缺少 $APP_DIR/zcode"
 say "解包完成，载荷就位"
 
-# ---- 3. 离线依赖补齐（只装缺失，绝不升级） ----
-if ! "$APP_DIR/offline-deps/install-deps.sh" > /tmp/install-deps.log 2>&1; then
+# ---- 3. 离线依赖补齐（只装缺失，绝不升级；幂等，QEMU 下个别维护脚本可能
+#         瞬时失败，重试靠 dpkg 实时状态判定收敛） ----
+deps_rc=1
+for deps_try in 1 2 3; do
+  if "$APP_DIR/offline-deps/install-deps.sh" > /tmp/install-deps.log 2>&1; then
+    deps_rc=0
+    break
+  fi
+  echo "[verify] install-deps 第 $deps_try/3 次未收敛，重试"
+  sleep 5
+done
+if [ "$deps_rc" -ne 0 ]; then
   grep -vE '^$' /tmp/install-deps.log | tr -d '\r' | tail -10 \
     | awk '{ i++; gsub(/%/, "%25"); print "::error title=install-deps-" i " ::" substr($0, 1, 400) }'
-  fail "install-deps.sh 失败（缺依赖或复验未过，日志尾部见注解）"
+  fail "install-deps.sh 三次未收敛（缺依赖或复验未过，日志尾部见注解）"
 fi
 say "离线依赖补齐完成"
 
