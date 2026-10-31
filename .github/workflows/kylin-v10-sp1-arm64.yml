@@ -181,6 +181,16 @@ jobs:
           fi
           echo "UNPACKED_DIR=$unpacked" >> "$GITHUB_ENV"
           echo "unpacked=$unpacked" >> "$GITHUB_STEP_SUMMARY"
+          if [ ! -x "$unpacked/zcode" ]; then
+            # 可执行名未按 executableName=zcode 生成时，列出目录并把事实发注解；
+            # 若 electron 原名二进制存在，按 electron-builder 的重命名语义补齐。
+            ls -la "$unpacked" | head -12 | awk '{ i++; gsub(/%/, "%25"); print "::error title=unpacked-list-" i " ::" substr($0, 1, 300) }'
+            if [ -f "$unpacked/electron" ]; then
+              mv "$unpacked/electron" "$unpacked/zcode"
+              chmod 755 "$unpacked/zcode"
+              echo "::error title=payload-rename ::executableName 未生效：已把 electron 改名为 zcode 继续"
+            fi
+          fi
           check() {
             local label="$1" path="$2" mode="$3"
             if [ "$mode" = "x" ]; then test -x "$path" || { echo "::error title=payload-$label ::缺少或不可执行: $path"; exit 1; }
