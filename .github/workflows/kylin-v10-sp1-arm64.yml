@@ -144,7 +144,11 @@ jobs:
           log="$GITHUB_WORKSPACE/electron-builder.log"
           ok=0
           for attempt in 1 2 3; do
+            # --config 必须显式传：26.17 的配置探测列表不含 electron-builder.config.js，
+            # 不传会静默按默认配置打包（executableName/extraResources/afterPack 钩子全丢，
+            # 排障记录见本 workflow 提交历史）。
             if pnpm --filter @zcode/desktop exec electron-builder \
+                --config electron-builder.config.js \
                 --linux dir --arm64 -c.npmRebuild=false 2>&1 | tee "$log"; then
               ok=1
               break
