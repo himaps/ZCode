@@ -52,6 +52,16 @@ done
 [ "$deb_count" -ge 1 ] || { echo "E: 闭包为空: $CLOSURE_DIR" >&2; exit 1; }
 cp "$CLOSURE_DIR/closure-manifest.txt" "$STAGING/opt/ZCode/offline-deps/closure-manifest.txt"
 
+# ---- 本地 apt 仓库索引：install-deps 用 file 仓库 + --no-upgrade 只装缺失 ----
+# apt 原生处理解包/配置顺序与触发器，避免 dpkg -i 在依赖顺序上翻车；
+# 没有索引时 install-deps 自行回退 dpkg -i 逐包路径。
+if command -v dpkg-scanpackages >/dev/null 2>&1; then
+  (cd "$STAGING/opt/ZCode/offline-deps" && dpkg-scanpackages --multiversion . > Packages) \
+    || echo "W: dpkg-scanpackages 失败，install-deps 将走 dpkg -i 回退路径" >&2
+else
+  echo "W: 构建机无 dpkg-scanpackages，install-deps 将走 dpkg -i 回退路径" >&2
+fi
+
 # ---- 桌面集成 ----
 cat > "$STAGING/usr/share/applications/zcode.desktop" <<'EOF'
 [Desktop Entry]
