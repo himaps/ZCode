@@ -39,11 +39,12 @@ if [ -f "$DEPS_DIR/Packages" ] && command -v apt-get >/dev/null 2>&1; then
 -o Acquire::AllowDowngradeToInsecureRepositories=true"
   if apt-get $APT_OPTS update > /tmp/zcode-deps-apt-update.log 2>&1 \
       && apt-get $APT_OPTS install -y --no-upgrade --no-install-recommends \
-           $(cat "$DEPS_DIR/closure-packages.txt") > /tmp/zcode-deps-apt-install.log 2>&1; then
+           $(cat "$DEPS_DIR/depends-seeds.txt") > /tmp/zcode-deps-apt-install.log 2>&1; then
     say "apt 本地仓库补装完成（--no-upgrade：已装包一律未触碰）"
     APT_OK=1
   else
-    say "apt 本地仓库路径失败（update/install 日志见 /tmp/zcode-deps-apt-*.log），回退 dpkg -i"
+    say "apt 本地仓库路径失败（unmet 明细如下），回退 dpkg -i"
+    grep -aE '^(E:|The following packages| [a-z])' /tmp/zcode-deps-apt-install.log 2>/dev/null | tail -12 || true
     tail -5 /tmp/zcode-deps-apt-install.log 2>/dev/null || true
     APT_OK=0
   fi

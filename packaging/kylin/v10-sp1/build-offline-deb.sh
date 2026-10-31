@@ -51,6 +51,9 @@ for deb in "$CLOSURE_DIR"/*.deb; do
 done
 [ "$deb_count" -ge 1 ] || { echo "E: 闭包为空: $CLOSURE_DIR" >&2; exit 1; }
 cp "$CLOSURE_DIR/closure-manifest.txt" "$STAGING/opt/ZCode/offline-deps/closure-manifest.txt"
+# 种子清单随包内置：install-deps 的 apt 路径以种子为安装目标，
+# 传递依赖由 apt 从闭包 file 仓库自动补齐。
+cp "$SCRIPT_DIR/depends-seeds.txt" "$STAGING/opt/ZCode/offline-deps/depends-seeds.txt"
 
 # ---- 本地 apt 仓库索引：install-deps 用 file 仓库 + --no-upgrade 只装缺失 ----
 # apt 原生处理解包/配置顺序与触发器，避免 dpkg -i 在依赖顺序上翻车；
