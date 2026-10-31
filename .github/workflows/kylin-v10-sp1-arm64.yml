@@ -240,9 +240,10 @@ jobs:
             echo "deliverable=dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb" >> "$GITHUB_OUTPUT"
           else
             {
-              grep -aE 'E: |超标|失败|error|缺少|GLIBC' dist/kylin/assemble.log | tr -d '\r' | head -7
-              echo "== tail =="
-              tail -4 dist/kylin/assemble.log | tr -d '\r'
+              echo "== glibc-scan-report top (降序) =="
+              head -12 dist/kylin/glibc-scan-report.txt 2>/dev/null | tr -d '\r'
+              echo "== keyword lines =="
+              grep -aE 'E: |超标|失败|error|缺少' dist/kylin/assemble.log | tr -d '\r' | head -5
             } > /tmp/assemble-diag.txt
             head -10 /tmp/assemble-diag.txt | awk '{ i++; gsub(/%/, "%25"); print "::error title=assemble-diag-" i " ::" substr($0, 1, 400) }'
             exit 1
