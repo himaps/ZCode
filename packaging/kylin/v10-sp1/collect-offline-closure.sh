@@ -83,25 +83,42 @@ for pkg in $all_pkgs; do
     skipped_blacklisted=$((skipped_blacklisted + 1))
     continue
   fi
-  # 虚包无法下载（如 debconf-2.0）：真实提供者要么在种子里、要么由目标机提供，记录后跳过
-  if ! apt-cache show "$pkg" >/dev/null 2>&1; then
+  # 纯虚包没有可下载版本：apt-cache show 对纯虚包 rc=0 但输出里没有 Version 字段
+  # （debconf-2.0 这类 Provides 别名即属此类），其真实提供者要么在种子里、
+  # 要么是目标机必备件，跳过并记录。
+  version_lines=$(apt-cache show "$pkg" 2>/dev/null | grep -c '^Version:' || true)
+  if [ "$version_lines" -eq 0 ]; then
     skipped_virtual=$((skipped_virtual + 1))
     echo "[closure] 跳过虚包: $pkg" >&2
     continue
   fi
   ok=0
+  dl_log=$(mktemp)
   for attempt in 1 2 3; do
-    if timeout 300 apt-get download "$pkg:arm64"; then
+    if timeout 300 apt-get download "$pkg:arm64" >"$dl_log" 2>&1; then
       ok=1
+      break
+    fi
+    # "no candidate"/"Unable to locate" 属虚包/缺名，重试无意义，降级为跳过
+    if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
       break
     fi
     echo "[closure] 下载重试 $attempt/3: $pkg" >&2
     sleep $((attempt * 5))
   done
   if [ "$ok" -ne 1 ]; then
+    if grep -qE 'no candidate|Unable to locate' "$dl_log"; then
+      skipped_virtual=$((skipped_virtual + 1))
+      echo "[closure] 跳过无可下载版本的包: $pkg" >&2
+      rm -f "$dl_log"
+      continue
+    fi
     echo "[closure] E: 下载失败: $pkg" >&2
+    tail -3 "$dl_log" >&2 || true
+    rm -f "$dl_log"
     exit 1
   fi
+  rm -f "$dl_log"
   downloaded=$((downloaded + 1))
 done
 
