@@ -230,13 +230,23 @@ jobs:
 
       - name: Assemble offline deb
         id: paths
+        shell: bash
         run: |
-          bash packaging/kylin/v10-sp1/build-offline-deb.sh \
-            "${UNPACKED_DIR:?assert 步骤未解析出载荷目录}" \
-            dist/kylin/closure \
-            "${{ steps.version.outputs.version }}" \
-            dist/kylin
-          echo "deliverable=dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb" >> "$GITHUB_OUTPUT"
+          if bash packaging/kylin/v10-sp1/build-offline-deb.sh \
+              "${UNPACKED_DIR:?assert 步骤未解析出载荷目录}" \
+              dist/kylin/closure \
+              "${{ steps.version.outputs.version }}" \
+              dist/kylin 2>&1 | tee dist/kylin/assemble.log; then
+            echo "deliverable=dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb" >> "$GITHUB_OUTPUT"
+          else
+            {
+              grep -aE 'E: |超标|失败|error|缺少|GLIBC' dist/kylin/assemble.log | tr -d '\r' | head -7
+              echo "== tail =="
+              tail -4 dist/kylin/assemble.log | tr -d '\r'
+            } > /tmp/assemble-diag.txt
+            head -10 /tmp/assemble-diag.txt | awk '{ i++; gsub(/%/, "%25"); print "::error title=assemble-diag-" i " ::" substr($0, 1, 400) }'
+            exit 1
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
