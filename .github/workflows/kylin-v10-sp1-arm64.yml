@@ -367,8 +367,9 @@ jobs:
           EOF
           sed -i "s/@VERSION@/${VERSION}/g" /tmp/release-notes.md
           for attempt in 1 2 3; do
-            # -R 显式指定仓库：release job 不 checkout，gh 无 git 上下文可推断
-            if gh release create -R "$GITHUB_REPOSITORY" \
+            # 第一个位置参数必须是 TAG（tag 名），后跟资产；-R 显式指定仓库
+            # （release job 不 checkout，gh 无 git 上下文可推断）。
+            if gh release create -R "$GITHUB_REPOSITORY" "$TAG" \
                 dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb \
                 dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb.sha256 \
                 --title "ZCode ${VERSION} Kylin V10 SP1 aarch64 (offline)" \
