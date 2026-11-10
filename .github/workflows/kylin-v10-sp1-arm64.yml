@@ -371,10 +371,13 @@ jobs:
                 dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb \
                 dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb.sha256 \
                 --title "ZCode ${VERSION} Kylin V10 SP1 aarch64 (offline)" \
-                --notes-file /tmp/release-notes.md; then
+                --notes-file /tmp/release-notes.md > /tmp/release-create.log 2>&1; then
+              echo "release created"
               exit 0
             fi
             echo "gh release create 重试 $attempt/3"
+            tail -6 /tmp/release-create.log | tr -d '\r' | head -4 \
+              | awk -v n="$attempt" '{ i++; gsub(/%/, "%25"); print "::error title=release-diag-" n "-" i " ::" substr($0, 1, 400) }'
             sleep 10
           done
           exit 1
