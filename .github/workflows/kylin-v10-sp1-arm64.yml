@@ -12,6 +12,12 @@ on:
     tags:
       - 'kylin-v10sp1-*'
   workflow_dispatch:
+    inputs:
+      upload_release_tag:
+        description: 构建完成后把 Windows exe 上传到该 tag 的现有 Release（可选）
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -290,6 +296,99 @@ jobs:
             dist/kylin/closure-manifest.txt
           if-no-files-found: error
 
+  windows:
+    name: Build Windows x64 installer
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+
+      - name: Resolve versions
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "ZCode $VERSION"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if pnpm install --frozen-lockfile; then exit 0; fi
+            echo "pnpm install 重试 $attempt/3"
+            sleep 20
+          done
+          exit 1
+
+      - name: Build desktop app (win32/x64)
+        shell: bash
+        env:
+          ZCODE_ENV: production
+          ZCODE_TARGET_OS: win32
+          ZCODE_TARGET_ARCH: x64
+        run: pnpm --filter @zcode/desktop build
+
+      - name: Package NSIS installer
+        shell: bash
+        env:
+          ZCODE_ENV: production
+          ZCODE_TARGET_OS: win32
+          ZCODE_TARGET_ARCH: x64
+        run: |
+          # System32 前置：Git Bash 的 GNU tar 会把 D:/ 路径当远程主机
+          export PATH="/c/Windows/System32:$PATH"
+          for attempt in 1 2 3; do
+            if pnpm --filter @zcode/desktop exec electron-builder \
+                --config electron-builder.config.js --win --x64; then
+              exit 0
+            fi
+            echo "electron-builder 重试 $attempt/3"
+            sleep 20
+          done
+          exit 1
+
+      - name: Locate installer
+        id: exe
+        shell: bash
+        run: |
+          exe=$(ls dist/ZCode-*-win-x64.exe | head -1)
+          test -f "$exe" || { echo "::error::未找到 NSIS 安装包"; exit 1; }
+          echo "path=$exe" >> "$GITHUB_OUTPUT"
+          echo "installer: $exe ($(wc -c < "$exe") bytes)"
+
+      # workflow_dispatch 指定 upload_release_tag 时，把 exe 直传到该 tag 的现有 Release
+      - name: Upload exe to existing release
+        if: github.event_name == 'workflow_dispatch' && inputs.upload_release_tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in 1 2 3; do
+            if gh release upload "${{ inputs.upload_release_tag }}" \
+                "${{ steps.exe.outputs.path }}" --clobber -R "$GITHUB_REPOSITORY"; then
+              echo "exe uploaded to release ${{ inputs.upload_release_tag }}"
+              exit 0
+            fi
+            echo "gh release upload 重试 $attempt/3"
+            sleep 20
+          done
+          exit 1
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zcode-win-x64-exe
+          path: dist/ZCode-*-win-x64.exe
+          if-no-files-found: error
+
   verify:
     name: Verify in arm64 focal container
     needs: build
@@ -331,10 +430,10 @@ jobs:
 
   release:
     name: GitHub Release (tag only)
-    needs: [build, verify]
+    needs: [build, verify, windows]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
@@ -342,6 +441,11 @@ jobs:
         with:
           name: kylin-v10sp1-arm64-offline-deb
           path: dist/kylin
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: zcode-win-x64-exe
+          path: dist/win
 
       - name: Create release
         env:
@@ -366,16 +470,28 @@ jobs:
           ```
           EOF
           sed -i "s/@VERSION@/${VERSION}/g" /tmp/release-notes.md
+          # 资产：deb + sha256 + Windows exe（bash 展开 glob）
+          assets=(dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb \
+            dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb.sha256 \
+            dist/win/ZCode-*-win-x64.exe)
           for attempt in 1 2 3; do
             # 第一个位置参数必须是 TAG（tag 名），后跟资产；-R 显式指定仓库
             # （release job 不 checkout，gh 无 git 上下文可推断）。
-            if gh release create -R "$GITHUB_REPOSITORY" "$TAG" \
-                dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb \
-                dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb.sha256 \
+            if gh release create -R "$GITHUB_REPOSITORY" "$TAG" "${assets[@]}" \
                 --title "ZCode ${VERSION} Kylin V10 SP1 aarch64 (offline)" \
                 --notes-file /tmp/release-notes.md > /tmp/release-create.log 2>&1; then
               echo "release created"
               exit 0
+            fi
+            # 同 tag 重推时 Release 已存在：改为补传资产（--clobber 覆盖同名）
+            if grep -aq "already_exists" /tmp/release-create.log; then
+              if gh release upload -R "$GITHUB_REPOSITORY" "$TAG" "${assets[@]}" --clobber \
+                  > /tmp/release-upload.log 2>&1; then
+                echo "release assets uploaded (existing release)"
+                exit 0
+              fi
+              tail -6 /tmp/release-upload.log | tr -d '\r' | head -4 \
+                | awk -v n="$attempt" '{ i++; gsub(/%/, "%25"); print "::error title=release-diag-" n "-" i " ::" substr($0, 1, 400) }'
             fi
             echo "gh release create 重试 $attempt/3"
             tail -6 /tmp/release-create.log | tr -d '\r' | head -4 \
