@@ -300,6 +300,8 @@ jobs:
     name: Build Windows x64 installer
     runs-on: windows-latest
     timeout-minutes: 90
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
