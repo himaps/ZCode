@@ -334,7 +334,11 @@ jobs:
           ZCODE_ENV: production
           ZCODE_TARGET_OS: win32
           ZCODE_TARGET_ARCH: x64
-        run: pnpm --filter @zcode/desktop build
+        run: |
+          # System32 前置：Git Bash 的 GNU tar 会把 D:/ 路径当远程主机
+          # （prepare:agent-bundle 的 bundled-npm 解压会用到 tar）
+          export PATH="/c/Windows/System32:$PATH"
+          pnpm --filter @zcode/desktop build
 
       - name: Package NSIS installer
         shell: bash
