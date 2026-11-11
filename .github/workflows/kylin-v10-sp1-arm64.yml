@@ -363,7 +363,7 @@ jobs:
         id: exe
         shell: bash
         run: |
-          exe=$(ls dist/ZCode-*-win-x64.exe | head -1)
+          exe=$(ls packages/desktop/dist/ZCode-*-win-x64.exe | head -1)
           test -f "$exe" || { echo "::error::未找到 NSIS 安装包"; exit 1; }
           echo "path=$exe" >> "$GITHUB_OUTPUT"
           echo "installer: $exe ($(wc -c < "$exe") bytes)"
@@ -390,7 +390,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zcode-win-x64-exe
-          path: dist/ZCode-*-win-x64.exe
+          path: packages/desktop/dist/ZCode-*-win-x64.exe
           if-no-files-found: error
 
   verify:
