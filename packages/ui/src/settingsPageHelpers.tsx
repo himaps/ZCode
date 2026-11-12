@@ -10,7 +10,7 @@ import {
   appToolSearchModeSchema,
   DEFAULT_APP_TOOL_SEARCH_MODE,
   LOCALE_NATIVE_NAMES,
-  SUPPORTED_LOCALES,
+  UI_ENABLED_LOCALES,
 } from "@zcode/shared";
 import {
   TID_SETTINGS_ASK_USER_QUESTION_AUTO_RESOLUTION_SWITCH,
@@ -367,7 +367,8 @@ export function GeneralSectionContent({
                   {intl.formatMessage({ id: "settings.locale.system" })}
                 </SelectItem>
                 {/* 语言选项显示各语言本名（LOCALE_NATIVE_NAMES），不随界面语言翻译。 */}
-                {SUPPORTED_LOCALES.map((locale) => (
+                {/* 离线交付只暴露中文与英文（UI_ENABLED_LOCALES 白名单）。 */}
+                {UI_ENABLED_LOCALES.map((locale) => (
                   <SelectItem
                     key={locale}
                     value={locale}

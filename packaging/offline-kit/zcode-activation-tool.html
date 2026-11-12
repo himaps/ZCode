@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZCode 激活码生成器（离线工具）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #1a1a2e; color: #e0e0e0;
+         display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 40px 20px; }
+  .card { background: #16213e; border-radius: 12px; padding: 32px; max-width: 520px; width: 100%;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+  h1 { font-size: 1.3em; margin-bottom: 4px; color: #e0e0e0; }
+  .sub { color: #8892b0; font-size: 0.85em; margin-bottom: 24px; }
+  label { display: block; font-size: 0.85em; color: #8892b0; margin: 16px 0 6px; }
+  textarea, .output { width: 100%; padding: 10px 12px; border: 1px solid #3a3a5c; border-radius: 8px;
+                       background: #0f3460; color: #e0e0e0; font-size: 1.05em; font-family: inherit;
+                       letter-spacing: 0.03em; resize: vertical; }
+  textarea { min-height: 44px; }
+  textarea:focus { outline: none; border-color: #e63946; }
+  .output { min-height: 44px; display: flex; align-items: center; font-weight: 600;
+            border-color: #e63946; background: #0a2647; cursor: pointer; user-select: all; }
+  .output:empty::before { content: '—'; color: #3a3a5c; font-weight: 400; }
+  .hint { font-size: 0.78em; color: #54608c; margin-top: 4px; }
+  .copy-btn { margin-top: 10px; width: 100%; padding: 9px; border: none; border-radius: 8px;
+              background: #e63946; color: white; font-size: 0.9em; cursor: pointer; }
+  .copy-btn:hover { background: #c92f3b; }
+  .error { color: #e74c3c; font-size: 0.82em; margin-top: 6px; min-height: 1.2em; }
+  .arrow { text-align: center; font-size: 1.4em; color: #e63946; margin: 14px 0; }
+  .words { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .word-chip { background: #0f3460; border: 1px solid #3a3a5c; border-radius: 6px;
+               padding: 4px 10px; font-size: 0.9em; color: #a0b4d0; }
+  .foot { margin-top: 20px; font-size: 0.72em; color: #54608c; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>ZCode 激活码生成器</h1>
+  <p class="sub">离线工具 · 输入用户发来的机器码，生成对应的激活码</p>
+  <label>机器码（用户发来的 4–6 个词语）</label>
+  <textarea id="machine" placeholder="粘贴或输入，如：慎行-和睦-宽和-守信" rows="2"
+            autocomplete="off" spellcheck="false"></textarea>
+  <p class="hint">支持用 - 、空格或换行分隔；粘贴后自动识别并格式化</p>
+  <div class="arrow">↓</div>
+  <label>激活码（发给用户）</label>
+  <div class="output" id="activation" onclick="copyActivation()" title="点击复制"></div>
+  <p class="error" id="err"></p>
+  <button class="copy-btn" onclick="copyActivation()">复制激活码</button>
+  <div class="words" id="chips"></div>
+  <p class="foot">
+    本工具为纯静态页面，可离线使用；算法与 ZCode 应用内置的验证逐字节一致。
+    激活码由机器码派生（KEY 混入 "zcode" 应用标识），与其他软件的激活码互不通用。
+  </p>
+</div>
+<script>
+'use strict';
+// 与 packages/shared/src/activation.ts 逐字节一致（词表顺序、KEY、APP_ID、域标签均不可改动）。
+const WORDS = ["富强","民主","文明","和谐","自由","平等","公正","法治","爱国","敬业","诚信","友善","昌隆","安泰","开化","盛平","兴邦","民本","崇文","和睦","自主","均平","公允","遵法","忠邦","恪职","立信","亲睦","弘道","笃行","崇信","尚和","守正","公义","平允","依规","严明","循法","明德","持公","普惠","安民","固本","维新","合众","宽和","明断","守矩","崇德","厚善","守诚","敬责","报国","敦睦","慎行","守信","向善","弘毅","克己","怀仁","崇礼","持节","谦恭","淳良"];
+const LOOKUP = new Map(WORDS.map((w,i)=>[w,i]));
+const KEY = new TextEncoder().encode("ZCode Kylin activation ledger key 1 (a marker, not a secret)");
+const APP_ID = new TextEncoder().encode("zcode");
+
+async function sha256(data) {
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+}
+
+function parseWords(text) {
+  return text.split(/[-—\s\n,;，；]+/).map(w=>w.trim()).filter(w=>w.length>0)
+             .map(w => { const i = LOOKUP.get(w); return i === undefined ? -1 : i; });
+}
+
+function renderChips(indices) {
+  const el = document.getElementById('chips');
+  el.innerHTML = indices.map(i => `<span class="word-chip">${WORDS[i]}</span>`).join('');
+}
+
+async function compute() {
+  const raw = document.getElementById('machine').value;
+  const err = document.getElementById('err');
+  const out = document.getElementById('activation');
+  err.textContent = ''; out.textContent = '';
+  document.getElementById('chips').innerHTML = '';
+  if (!raw.trim()) return;
+  const indices = parseWords(raw);
+  if (indices.some(i => i < 0)) {
+    const bad = raw.split(/[-—\s\n,;，；]+/).map(w=>w.trim()).find(w=>w && LOOKUP.get(w)===undefined);
+    err.textContent = `不是有效的词语: ${bad || '?'}`;
+    return;
+  }
+  if (indices.length < 4 || indices.length > 6) {
+    err.textContent = `需要 4–6 个词语，收到 ${indices.length} 个`;
+    return;
+  }
+  renderChips(indices);
+  const data = new Uint8Array(KEY.length + APP_ID.length + indices.length);
+  data.set(KEY); data.set(APP_ID, KEY.length); data.set(new Uint8Array(indices), KEY.length + APP_ID.length);
+  const hash = await sha256(data);
+  const act = Array.from(hash.slice(0, indices.length)).map(b => b & 63);
+  out.textContent = act.map(i => WORDS[i]).join('-');
+}
+
+function copyActivation() {
+  const text = document.getElementById('activation').textContent;
+  if (text && text !== '—') navigator.clipboard.writeText(text);
+}
+
+document.getElementById('machine').addEventListener('input', compute);
+</script>
+</body>
+</html>

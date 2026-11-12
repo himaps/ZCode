@@ -237,6 +237,7 @@ import {
 } from "./resourceManagerWindow.js";
 import { createWebRemoteControlSharedHostAttachments } from "./webRemoteControlSharedHostAttachments.js";
 import { createDesktopHelpConfigReader } from "./desktopHelpConfig.js";
+import { registerDesktopActivationIpc } from "./desktopActivationIpc.js";
 import { registerPlatformIpcHandlers } from "./desktopMainIpcPlatform.js";
 import { registerAppControlNavigationIpc } from "#src/app-control-navigation/main.js";
 import {
@@ -2465,6 +2466,8 @@ app.whenReady().then(async () => {
   }
 
   registerAppControlNavigationIpc(ipcMain, (contents) => BrowserWindow.fromWebContents(contents));
+  // 离线激活门禁：机器码/激活码 IPC（fork-only，不依赖网络）。
+  registerDesktopActivationIpc();
   registerPlatformIpcHandlers({
     fetchHelpConfig: readHelpConfig,
     logger,

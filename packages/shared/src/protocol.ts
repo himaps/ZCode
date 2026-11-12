@@ -79,6 +79,13 @@ export interface SystemInfo {
  */
 export const SUPPORTED_LOCALES = ["zh-CN", "en-US", "ja-JP", "ru-RU", "ko-KR"] as const;
 
+/**
+ * 离线交付白名单：界面语言下拉只暴露中文与英文（fork-only，不对上游）。
+ * 上游新增的语言资源（ja/ko/ru…）继续随包编译、Locale 类型不变，
+ * 只是设置 UI 不再提供选项；已存储的其他语言偏好仍能正常渲染。
+ */
+export const UI_ENABLED_LOCALES = ["zh-CN", "en-US"] as const;
+
 /** 支持的语言 */
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 

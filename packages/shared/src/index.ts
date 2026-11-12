@@ -1,5 +1,6 @@
 export { cloudContentPayloadSchema, contentBundleSchema } from "./cloudContent.js";
 export * from "./networkCapture.js";
+export * from "./activation.js";
 export type {
   CloudContentPayload,
   CloudContentBundle,
@@ -34,7 +35,7 @@ export type {
   PersistedWorkspaceSessionEntry,
 } from "./protocol.js";
 export type { WorkspacePurpose } from "./workspacePurpose.js";
-export { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "./protocol.js";
+export { DEFAULT_LOCALE, SUPPORTED_LOCALES, UI_ENABLED_LOCALES } from "./protocol.js";
 export {
   hasLegacyIncompatiblePersistedLocale,
   isLocale,

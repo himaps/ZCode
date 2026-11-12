@@ -2357,3 +2357,18 @@ exceptions:
     paths:
       - packages/ui/src/root/GlobalDatabaseStartupLoading.tsx
     reason: 启动失败页在现有复制诊断/重试/退出旁增加导出日志按钮（docs/desktop/database-migration-startup-gate-plan.md）。只扩展既有失败页交互，不新增文件、不改变启动状态 owner 或模块边界；接管 packages/ui/src/root 不在本次范围内。
+  - id: kylin-offline-activation-shared
+    rule: unmanaged-new-file
+    paths:
+      - packages/shared/src/activation.ts
+    reason: 离线激活系统纯算法模块（docs/kylin-offline-activation.md，fork-only 不对上游）：词表/机器码/激活码派生与校验，WebCrypto 纯函数，无协议或模块边界新增；接管整个 shared 未受管模块不在本次范围内。
+  - id: kylin-offline-activation-desktop-ipc
+    rule: unmanaged-new-file
+    paths:
+      - packages/desktop/src/main/desktopActivationIpc.ts
+    reason: 离线激活门禁的主进程侧（docs/kylin-offline-activation.md）：机器标识读取、license 落盘与两个 IPC handler，复用 getDataBaseDir 与 @zcode/shared activation 纯函数；接管整个 desktop main 不在本次范围内。
+  - id: kylin-offline-activation-ui-gate
+    rule: unmanaged-new-file
+    paths:
+      - packages/ui/src/activation/ActivationGate.tsx
+    reason: 离线激活门禁屏（docs/kylin-offline-activation.md）：启动时整屏拦截未激活会话，桥接缺失即非桌面环境放行；只消费既有 Button/Input 与设计变量，接管整个 ui 未受管模块不在本次范围内。

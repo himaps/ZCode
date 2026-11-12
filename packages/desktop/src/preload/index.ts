@@ -112,6 +112,7 @@ import type {
   ConfigureFinalArmsCustomEventE2ERequest,
   FinalArmsCustomEventE2EEntry,
 } from "@zcode/shared";
+import { ACTIVATION_IPC } from "@zcode/shared";
 import {
   InternalChannels,
   PlatformChannels,
@@ -280,6 +281,26 @@ window.addEventListener("DOMContentLoaded", updateRendererProcessTitle, {
  * 通过 MessagePort RPC 访问，不再经过此 bridge。
  */
 contextBridge.exposeInMainWorld("zcode", {
+  /** 离线激活门禁（fork-only）：查询激活状态与本机机器码。 */
+  activationStatus: (): Promise<{
+    activated: boolean;
+    machineCode: string | null;
+    machineIdError: string | null;
+  }> =>
+    ipcRenderer.invoke(ACTIVATION_IPC.status) as Promise<{
+      activated: boolean;
+      machineCode: string | null;
+      machineIdError: string | null;
+    }>,
+  /** 离线激活门禁：提交用户输入的激活码，主进程验证并落盘。 */
+  activationActivate: (
+    typed: string,
+  ): Promise<{ ok: boolean; reason?: string; detail?: string }> =>
+    ipcRenderer.invoke(ACTIVATION_IPC.activate, typed) as Promise<{
+      ok: boolean;
+      reason?: string;
+      detail?: string;
+    }>,
   connectRemote: (
     options: RemoteTarget,
     requestId?: string,

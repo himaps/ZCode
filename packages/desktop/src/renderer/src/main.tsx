@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { useEffect } from "react";
 import {
   AppErrorBoundary,
+  ActivationGate,
   Root,
   GlobalDatabaseStartupLoading,
   UpdateStatusWindowRoot,
@@ -361,21 +362,26 @@ function initializeBusinessRoot(port: MessagePort): void {
         resolveSystemLocale={desktopPlatform.getSystemLocale}
       >
         <StartupReadyNotifier />
-        <Root
-          services={services}
-          platform={desktopPlatform}
-          isDesktop
-          assistantCodeCommentCardsEnabled
-          isMacDesktop={isMacDesktop}
-          isWindowsDesktop={isWindowsDesktop}
-          restoreSession={restoreSession}
-          supportsSettings={supportsSettings}
-          initialWorkspaceAbsPath={initialWorkspaceAbsPath}
-          initialWorkspacePurpose={
-            initialWorkspacePurpose === "conversation" ? "conversation" : "project"
-          }
-          unavailableWorkspacePath={unavailableWorkspacePath}
-        />
+        {/* 离线激活门禁（fork-only）：未激活时整屏替换主 UI；桥接缺失时放行。 */}
+        <ActivationGate>
+          {/* 离线交付关闭移动端远程控制入口（WebRemoteControlFeatureProvider 默认开启）。 */}
+          <Root
+            services={services}
+            platform={desktopPlatform}
+            isDesktop
+            assistantCodeCommentCardsEnabled
+            webRemoteControlFeatureEnabled={false}
+            isMacDesktop={isMacDesktop}
+            isWindowsDesktop={isWindowsDesktop}
+            restoreSession={restoreSession}
+            supportsSettings={supportsSettings}
+            initialWorkspaceAbsPath={initialWorkspaceAbsPath}
+            initialWorkspacePurpose={
+              initialWorkspacePurpose === "conversation" ? "conversation" : "project"
+            }
+            unavailableWorkspacePath={unavailableWorkspacePath}
+          />
+        </ActivationGate>
       </ZCodeIntlProvider>
     </AppErrorBoundary>,
   );
