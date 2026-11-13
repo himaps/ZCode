@@ -37,7 +37,7 @@
 <div class="card">
   <h1>ZCode 激活码生成器</h1>
   <p class="sub">离线工具 · 输入用户发来的机器码，生成对应的激活码</p>
-  <label>机器码（用户发来的 4–6 个词语）</label>
+  <label>机器码（用户发来的 4 个词语）</label>
   <textarea id="machine" placeholder="粘贴或输入，如：慎行-和睦-宽和-守信" rows="2"
             autocomplete="off" spellcheck="false"></textarea>
   <p class="hint">支持用 - 、空格或换行分隔；粘贴后自动识别并格式化</p>
@@ -87,8 +87,8 @@ async function compute() {
     err.textContent = `不是有效的词语: ${bad || '?'}`;
     return;
   }
-  if (indices.length < 4 || indices.length > 6) {
-    err.textContent = `需要 4–6 个词语，收到 ${indices.length} 个`;
+  if (indices.length !== 4) {
+    err.textContent = `需要 4 个词语，收到 ${indices.length} 个`;
     return;
   }
   renderChips(indices);

@@ -1,7 +1,7 @@
 /**
  * ZCode 离线激活系统（fork-only，不对上游）。
  *
- * 与 pdfcraft 激活系统同构的 4–6 中文词方案，字节级语义：
+ * 与 pdfcraft 激活系统同构的中文词方案（fork 差异：固定 4 词，pdfcraft 为 4–6 可变长度）。字节级语义：
  * - 机器码：SHA-256( machine_id.trim().toLowerCase() 的 UTF-8 ++ "\nzcode-activation-v1" )
  *   → 词数 n = 4 + digest[31] % 3（长度编码在 digest 里，两码天然同长）
  *   → 机器码第 i 词索引 = digest[i] & 63
@@ -106,14 +106,13 @@ async function activationDigest(machineId: string): Promise<Uint8Array> {
 }
 
 /**
- * 机器码索引。n = 4 + digest[31] % 3 ∈ [4,6]；第 i 词索引 = digest[i] & 63。
+ * 机器码索引。固定 4 词（fork 相对 pdfcraft 的差异：不做 4–6 可变长度）；
+ * 第 i 词索引 = digest[i] & 63。
  */
 export async function deriveMachineCodeIndices(machineId: string): Promise<number[]> {
   const digest = await activationDigest(machineId);
-  const lastByte = digest[digest.length - 1] ?? 0;
-  const count = 4 + (lastByte % 3);
   const indices: number[] = [];
-  for (let i = 0; i < count; i += 1) {
+  for (let i = 0; i < 4; i += 1) {
     indices.push((digest[i] ?? 0) & 63);
   }
   return indices;

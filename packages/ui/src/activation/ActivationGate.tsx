@@ -208,7 +208,7 @@ export function ActivationGate({ children }: { children: ReactNode }) {
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !submitting) void submit();
               }}
-              placeholder="4–6 个词语，用 - 连接"
+              placeholder="4 个词语，用 - 连接"
               className="mt-2 h-11 border-primary/30 text-base tracking-wide"
               autoComplete="off"
               spellCheck={false}
