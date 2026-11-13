@@ -363,7 +363,7 @@ function initializeBusinessRoot(port: MessagePort): void {
       >
         <StartupReadyNotifier />
         {/* 离线激活门禁（fork-only）：未激活时整屏替换主 UI；桥接缺失时放行。 */}
-        <ActivationGate>
+        <ActivationGate platform={desktopPlatform}>
           {/* 离线交付关闭移动端远程控制入口（WebRemoteControlFeatureProvider 默认开启）。 */}
           <Root
             services={services}

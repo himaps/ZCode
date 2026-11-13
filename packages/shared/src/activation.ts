@@ -49,6 +49,21 @@ export type ActivationOk = { ok: true; indices: number[] };
 
 export type ActivationVerifyResult = ActivationOk | ActivationWordError;
 
+/** IPlatformService.activation.status() 的返回（仅 Desktop 实现）。 */
+export type ActivationStatusResult = {
+  activated: boolean;
+  /** 本机机器码（词语串，- 连接）；机器标识读取失败时为 null。 */
+  machineCode: string | null;
+  machineIdError: string | null;
+};
+
+/** IPlatformService.activation.activate() 的返回。 */
+export type ActivationApplyResult = {
+  ok: boolean;
+  reason?: ActivationWordError["reason"] | "machine-id-unavailable" | "write-failed";
+  detail?: string;
+};
+
 function activationWord(index: number): string {
   const normalized =
     ((index % ACTIVATION_WORDS.length) + ACTIVATION_WORDS.length) % ACTIVATION_WORDS.length;

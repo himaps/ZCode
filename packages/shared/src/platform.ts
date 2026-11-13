@@ -6,6 +6,7 @@ import type {
   WSLConnectOptions,
 } from "./remoteTarget.js";
 import type { PluginSandboxPlatformPort } from "./mcp-apps/contract.js";
+import type { ActivationApplyResult, ActivationStatusResult } from "./activation.js";
 import type {
   LoadCliMcpFromUserDirectoryRequest,
   LoadCliMcpFromUserDirectoryResult,
@@ -854,6 +855,16 @@ export interface IPlatformService {
     /** macOS：重置 ZCode 自己的麦克风授权记录并重新请求；其他系统返回 failed */
     resetAccess(): Promise<MicrophoneAccessResetResult>;
     openSettings(target: MicrophoneSettingsTarget): Promise<boolean>;
+  };
+
+  /**
+   * 离线激活门禁（fork-only，仅 Desktop 实现；web / 手机远控为 undefined，
+   * 门禁组件据此直接放行）。status 返回激活状态与本机机器码词串；
+   * activate 校验用户输入的激活码并写 .license.md。
+   */
+  activation?: {
+    status(): Promise<ActivationStatusResult>;
+    activate(typed: string): Promise<ActivationApplyResult>;
   };
 
   /**

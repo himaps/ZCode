@@ -50,9 +50,12 @@ export function shouldShowRootStartupLoading(
 export function shouldEnableProviderAvailabilityLoginEntryGuard(
   state: ProviderAvailabilityLoginEntryGuardState,
 ): boolean {
-  // 修复原因：手机 Web 远控只 attachment 到桌面已有 host，不能用本地空 provider
-  // 快照触发登录页，否则断连/home-only 首页会被 WelcomeScreen 覆盖。
-  return !state.isWebRemoteControlRoot;
+  // fork-only（离线交付，docs/kylin-offline-divergences.md）：内网/离线使用不配置
+  // 云端账号，provider 登录引导（输入 API Key / 暂时跳过）每次启动都会拦截主界面，
+  // 对已激活用户是纯噪音——启动直接进入主界面。激活门禁由 ActivationGate 负责，
+  // 与本守卫解耦；原上游行为是 `!state.isWebRemoteControlRoot`。
+  void state;
+  return false;
 }
 
 export function shouldResolveProviderStartupState(

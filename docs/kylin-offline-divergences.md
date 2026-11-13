@@ -12,6 +12,7 @@ himaps/ZCode 是 zai-org/ZCode 的 fork（不向上游 PR），为国产化离�
 | 个人信息弹窗【邀请好友】移除 | `WorkspaceSidebarFooter.tsx` | 删 rewards 菜单项 + `Gift`/`Badge` import + `useOpenRewards`；RewardsProvider/MarketingTouch 本体保留 |
 | 界面语言仅中文/英文 | `packages/shared/src/protocol.ts` `UI_ENABLED_LOCALES` | 两处下拉（`settingsPageHelpers.tsx`、`WorkspaceSidebarFooter.tsx`）消费白名单而非 `SUPPORTED_LOCALES`；上游新增语言资源继续随包、类型不变 |
 | 语音输入组件移除 | `packages/ui/src/components/ai-elements/speech-input.tsx` | 文件删除（上游本就无挂载点，属孤儿组件；若上游将来挂载需重新评估） |
+| provider 登录引导关闭 | `packages/ui/src/lib/rootStartupGate.ts` `shouldEnableProviderAvailabilityLoginEntryGuard` | 固定返回 false：内网/离线使用不配置云端账号，跳过【输入 API Key / 暂时跳过】引导直达主界面；激活门禁（ActivationGate）独立负责激活拦截 |
 
 相关 e2e（本流水线不跑，本地跑会红）：`marketing-touch-rewards.test.ts`（rewards 菜单与升级按钮断言）、coding-plan-upgrade 相关 e2e。
 

@@ -5,6 +5,8 @@ import {
   resolveLocaleFromLanguageTag,
   unwrapRemoteWorkspaceBindResult,
   type IPlatformService,
+  type ActivationStatusResult,
+  type ActivationApplyResult,
 } from "@zcode/shared";
 
 import { desktopBrowserPlatformBridge } from "./desktopBrowserPlatformBridge.js";
@@ -15,6 +17,10 @@ export function createDesktopPlatform(options: {
   isLocalDevelopmentRuntime: boolean;
 }): IPlatformService {
   return {
+    activation: {
+      status: () => window.zcode.activationStatus(),
+      activate: (typed: string) => window.zcode.activationActivate(typed),
+    },
     onAppControlNavigation: (handler) =>
       registerAppControlNavigationHandler(
         {

@@ -43,8 +43,6 @@ export {
   resolveSidebarFooterProfilePlanBadge,
 } from "@/WorkspaceSidebarFooterPlanBadgeHelpers.js";
 
-const TID_SIDEBAR_CODING_PLAN_UPGRADE_BUTTON = "sidebar-coding-plan-upgrade-button";
-
 export function WorkspaceSidebarFooterUsageSummary({
   enabled,
   onUsageClick,

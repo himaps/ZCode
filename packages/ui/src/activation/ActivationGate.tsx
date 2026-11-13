@@ -1,28 +1,16 @@
 /* eslint-disable max-lines -- 门禁屏的状态机、验证交互与版式同属一个组件，拆开会割裂激活语义 */
 // ZCode 离线激活门禁（fork-only）：未激活时整屏替换主 UI。
-// 桥接缺失（web/非桌面环境）时直接放行——门禁只属于桌面交付形态。
+// 平台未实现 activation（web / 手机远控）时直接放行——门禁只属于桌面交付形态。
+// 平台操作经 IPlatformService 注入（遵守“UI 不直接调用 window.zcode”的边界）。
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { CheckCircle2Icon, CopyIcon, Loader2Icon, ShieldCheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
 import { Input } from "@/components/ui/input.js";
-import { parseActivationCodeText } from "@zcode/shared";
-
-type ActivationStatus = {
-  activated: boolean;
-  machineCode: string | null;
-  machineIdError: string | null;
-};
-
-type ActivationResult = { ok: boolean; reason?: string; detail?: string };
-
-declare global {
-  interface Window {
-    zcodeActivation?: {
-      status: () => Promise<ActivationStatus>;
-      activate: (typed: string) => Promise<ActivationResult>;
-    };
-  }
-}
+import {
+  parseActivationCodeText,
+  type ActivationStatusResult,
+  type IPlatformService,
+} from "@zcode/shared";
 
 type GatePhase =
   | { kind: "checking" }
@@ -36,7 +24,7 @@ function errorText(reason: string | undefined, detail: string | undefined): stri
     case "bad-word":
       return `不是有效的激活词：${detail ?? "?"}`;
     case "wrong-length":
-      return `激活码应为 ${detail ?? "?"} 个词语，请核对后重新输入`;
+      return "激活码应为 4 个词语，请核对后重新输入";
     case "mismatch":
       return "激活码与本机机器码不匹配";
     case "invalid-input":
@@ -50,7 +38,13 @@ function errorText(reason: string | undefined, detail: string | undefined): stri
   }
 }
 
-export function ActivationGate({ children }: { children: ReactNode }) {
+export function ActivationGate({
+  platform,
+  children,
+}: {
+  platform: IPlatformService;
+  children: ReactNode;
+}) {
   const [phase, setPhase] = useState<GatePhase>({ kind: "checking" });
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -60,24 +54,24 @@ export function ActivationGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    const bridge = window.zcodeActivation;
-    if (!bridge) {
+    // 平台未实现 activation（web / 手机远控）→ 非桌面交付形态，放行
+    const status = platform.activation?.status.bind(platform.activation);
+    if (!status) {
       setPhase({ kind: "missing-bridge" });
       return;
     }
-    bridge
-      .status()
-      .then((status) => {
+    status()
+      .then((state: ActivationStatusResult) => {
         if (cancelled) return;
-        if (status.activated) {
+        if (state.activated) {
           setPhase({ kind: "ok" });
-        } else if (status.machineIdError || !status.machineCode) {
+        } else if (state.machineIdError || !state.machineCode) {
           setPhase({
             kind: "machine-id-error",
-            detail: status.machineIdError ?? "unknown",
+            detail: state.machineIdError ?? "unknown",
           });
         } else {
-          setPhase({ kind: "gated", machineCode: status.machineCode });
+          setPhase({ kind: "gated", machineCode: state.machineCode });
         }
       })
       .catch(() => {
@@ -86,13 +80,13 @@ export function ActivationGate({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [platform]);
 
   const machineWords = phase.kind === "gated" ? phase.machineCode.split("-") : [];
 
   const submit = useCallback(async () => {
-    const bridge = window.zcodeActivation;
-    if (!bridge || phase.kind !== "gated") return;
+    const activate = platform.activation?.activate.bind(platform.activation);
+    if (!activate || phase.kind !== "gated") return;
     // 客户端先做轻校验，给出即时反馈；权威校验在主进程。
     const parsed = parseActivationCodeText(typed);
     if (!parsed.ok) {
@@ -102,7 +96,7 @@ export function ActivationGate({ children }: { children: ReactNode }) {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await bridge.activate(typed);
+      const result = await activate(typed);
       if (result.ok) {
         setPhase({ kind: "ok" });
       } else {
@@ -114,7 +108,7 @@ export function ActivationGate({ children }: { children: ReactNode }) {
     } finally {
       setSubmitting(false);
     }
-  }, [phase, typed]);
+  }, [platform, phase, typed]);
 
   const copyMachineCode = useCallback(() => {
     if (phase.kind !== "gated") return;

@@ -37,6 +37,27 @@ export type {
 export type { WorkspacePurpose } from "./workspacePurpose.js";
 export { DEFAULT_LOCALE, SUPPORTED_LOCALES, UI_ENABLED_LOCALES } from "./protocol.js";
 export {
+  ACTIVATION_IPC,
+  ACTIVATION_APP_ID,
+  ACTIVATION_WORDS,
+  parseActivationCodeText,
+  renderActivationCode,
+  deriveMachineCodeIndices,
+  deriveActivationIndices,
+  deriveMachineCodeWords,
+  deriveActivationWords,
+  verifyActivationInput,
+  licenseFileContent,
+  parseLicenseFile,
+} from "./activation.js";
+export type {
+  ActivationStatusResult,
+  ActivationApplyResult,
+  ActivationVerifyResult,
+  ActivationWordError,
+  ActivationOk,
+} from "./activation.js";
+export {
   hasLegacyIncompatiblePersistedLocale,
   isLocale,
   isLocalePreference,
