@@ -19,7 +19,7 @@ REPO_ROOT=$(cd -- "$SCRIPT_DIR/../../.." && pwd)
 ICONS_DIR="$REPO_ROOT/packages/desktop/build/icons"
 GLIBC_MAX="2.31"
 PACKAGE_NAME="zcode"
-DELIVERABLE="zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb"
+DELIVERABLE="ZCode-${VERSION}-kylin-v10-sp1-aarch64-glibc2.31-offline.deb"
 
 for f in "$UNPACKED/zcode" "$UNPACKED/resources/app.asar" "$UNPACKED/chrome-sandbox"; do
   [ -e "$f" ] || { echo "E: 载荷缺少 $f（electron-builder dir 产物不完整）" >&2; exit 1; }

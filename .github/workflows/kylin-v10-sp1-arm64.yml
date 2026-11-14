@@ -5,7 +5,7 @@ name: Kylin V10 SP1 aarch64 offline deb
 # - 构建基线用 ubuntu:20.04 (focal)——与麒麟 V10 SP1 同源同版本（glibc 2.31、包名一致），
 #   不用 Debian bullseye（包名错配 + security pool 已 404）；
 # - tag `kylin-v10sp1-*` 推送自动触发构建并在验证通过后创建 GitHub Release；
-# - 产物：zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb
+# - 产物：ZCode-<版本>-kylin-v10-sp1-aarch64-glibc2.31-offline.deb
 
 on:
   push:
@@ -273,7 +273,7 @@ jobs:
               dist/kylin/closure \
               "${{ steps.version.outputs.version }}" \
               dist/kylin 2>&1 | tee dist/kylin/assemble.log; then
-            echo "deliverable=dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb" >> "$GITHUB_OUTPUT"
+            echo "deliverable=dist/kylin/ZCode-${{ steps.version.outputs.version }}-kylin-v10-sp1-aarch64-glibc2.31-offline.deb" >> "$GITHUB_OUTPUT"
           else
             {
               echo "== keyword lines =="
@@ -434,7 +434,7 @@ jobs:
             -e ZCODE_VERIFY_NATIVE \
             ubuntu:20.04 \
             bash packaging/kylin/v10-sp1/verify-offline-deb.sh \
-              dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb
+              dist/kylin/ZCode-*-kylin-v10-sp1-aarch64-glibc2.31-offline.deb
 
   release:
     name: GitHub Release (tag only)
@@ -466,21 +466,21 @@ jobs:
           ## ZCode @VERSION@ — 银河麒麟 V10 SP1 (aarch64) 离线安装包
 
           - 目标系统：银河麒麟桌面 V10 SP1（2503）aarch64，glibc 2.31（focal 同源基线）
-          - 产物：`zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb`（应用本体 + 离线依赖闭包 + 补齐脚本）
+          - 产物：`ZCode-<版本>-kylin-v10-sp1-aarch64-glibc2.31-offline.deb`（应用本体 + 离线依赖闭包 + 补齐脚本）
           - 已通过：GLIBC 符号门禁（<= 2.31）、focal arm64 容器安装验证、零升级断言（绝不升级系统组件）、ldd 零 not found
           - 不适用于：麒麟 V10 原版（glibc 2.23）、x86_64 机器
 
           ### 安装
           ```sh
-          sudo dpkg -i zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb
+          sudo dpkg -i ZCode-*.kylin-v10-sp1-aarch64-glibc2.31-offline.deb
           # 缺依赖时自动延迟补装；结果查看: journalctl -u zcode-deps
           # 也可手动补齐: sudo /opt/ZCode/offline-deps/install-deps.sh
           ```
           EOF
           sed -i "s/@VERSION@/${VERSION}/g" /tmp/release-notes.md
           # 资产：deb + sha256 + Windows exe（bash 展开 glob）
-          assets=(dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb \
-            dist/kylin/zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb.sha256 \
+          assets=(dist/kylin/ZCode-*-kylin-v10-sp1-aarch64-glibc2.31-offline.deb \
+            dist/kylin/ZCode-*-kylin-v10-sp1-aarch64-glibc2.31-offline.deb.sha256 \
             dist/win/ZCode-*-win-x64.exe)
           for attempt in 1 2 3; do
             # 第一个位置参数必须是 TAG（tag 名），后跟资产；-R 显式指定仓库

@@ -2,7 +2,7 @@
 
 ## 目标产物
 
-- 交付物：`zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb`（内部包名 `zcode_<version>_arm64.deb`， deb 格式）。
+- 交付物：`ZCode-<版本>-kylin-v10-sp1-aarch64-glibc2.31-offline.deb`（如 `ZCode-3.18.2-kylin-v10-sp1-aarch64-glibc2.31-offline.deb`；内部包名 `zcode_<version>_arm64.deb`，deb 格式；命名与 Windows 侧 `ZCode-<版本>-win-x64.exe` 对齐）。
 - 目标系统：银河麒麟桌面操作系统 V10 SP1（2503），**aarch64**，glibc **2.31**，GCC 9.3，上游血脉 **Ubuntu 20.04 (focal)**。
 - 包身份：生产 flavor（`ZCODE_ENV=production`，包名 `zcode`、可执行名 `zcode`，见 `packages/desktop/scripts/desktop-product-identity.mjs`）。
 - 离线 deb = 应用本体 + 运行时依赖闭包（`/opt/ZCode/offline-deps/*.deb`）+ 依赖补齐脚本（`install-deps.sh`）。离线机是国产化场景常态，装完即可运行，不要求目标机联网。
@@ -48,7 +48,7 @@ GitHub Actions（`.github/workflows/kylin-v10-sp1-arm64.yml`），触发：
 
 ## 安装与卸载契约（目标机）
 
-- 常规安装：`sudo dpkg -i zcode-kylin-v10-sp1-aarch64-glibc2.31-offline.deb`。麒麟桌面自带 GTK3/NSS 等依赖时直接配置完成；缺依赖时 dpkg 停在 unpacked，postinst 会安排 `install-deps.sh` 延迟补装（systemd）或提示手动执行。
+- 常规安装：`sudo dpkg -i ZCode-*.kylin-v10-sp1-aarch64-glibc2.31-offline.deb`。麒麟桌面自带 GTK3/NSS 等依赖时直接配置完成；缺依赖时 dpkg 停在 unpacked，postinst 会安排 `install-deps.sh` 延迟补装（systemd）或提示手动执行。
 - `install-deps.sh`：幂等；只装 `/opt/ZCode/offline-deps/` 内缺失包；结束后 ldd 复验主二进制，输出"全部就绪"或仍缺清单；结果进 `journalctl -u zcode-deps`。
 - 卸载：`sudo dpkg -r zcode`；用户数据（`~/.zcode`）保留，不清理。
 - 沙箱：`chrome-sandbox` 以 4755 随包安装；postinst 兜底 chmod。
