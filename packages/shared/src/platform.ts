@@ -865,6 +865,8 @@ export interface IPlatformService {
   activation?: {
     status(): Promise<ActivationStatusResult>;
     activate(typed: string): Promise<ActivationApplyResult>;
+    /** 退出应用（激活屏的退出按钮；绕过 close-to-tray 直接结束进程）。 */
+    quit(): Promise<void>;
   };
 
   /**

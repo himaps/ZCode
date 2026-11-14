@@ -20,6 +20,7 @@ export function createDesktopPlatform(options: {
     activation: {
       status: () => window.zcode.activationStatus(),
       activate: (typed: string) => window.zcode.activationActivate(typed),
+      quit: () => window.zcode.activationQuit(),
     },
     onAppControlNavigation: (handler) =>
       registerAppControlNavigationHandler(

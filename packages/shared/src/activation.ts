@@ -37,6 +37,7 @@ export const ACTIVATION_SEPARATOR = "-";
 export const ACTIVATION_IPC = {
   status: "zcode-activation:status",
   activate: "zcode-activation:activate",
+  quit: "zcode-activation:quit",
 } as const;
 
 export type ActivationWordError = {

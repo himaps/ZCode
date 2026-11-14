@@ -223,6 +223,16 @@ export function ActivationGate({
           <p className="mt-6 border-t pt-4 text-center text-xs text-muted-foreground">
             激活码由维护者通过离线激活工具生成，与机器码一一对应
           </p>
+
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => void platform.activation?.quit()}
+              className="rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              退出应用
+            </button>
+          </div>
         </div>
       </div>
     </div>

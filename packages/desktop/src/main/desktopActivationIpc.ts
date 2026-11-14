@@ -4,7 +4,7 @@
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { ipcMain } from "electron";
+import { app, ipcMain } from "electron";
 import {
   ACTIVATION_IPC,
   deriveMachineCodeIndices,
@@ -113,6 +113,11 @@ async function buildStatusPayload(): Promise<ActivationStatusPayload> {
 export function registerDesktopActivationIpc(): void {
   ipcMain.handle(ACTIVATION_IPC.status, async (): Promise<ActivationStatusPayload> => {
     return buildStatusPayload();
+  });
+
+  // 激活屏的退出按钮：直接结束进程，不经过 close-to-tray / 确认退出流程。
+  ipcMain.handle(ACTIVATION_IPC.quit, async (): Promise<void> => {
+    app.quit();
   });
 
   ipcMain.handle(

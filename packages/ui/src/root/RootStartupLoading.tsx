@@ -36,7 +36,7 @@ export function ZCodeStartupLogoBadge({
     <div
       data-desktop-logo-badge={size === "titlebar" ? "true" : undefined}
       className={cn(
-        "relative flex items-center justify-center bg-[linear-gradient(180deg,#000000_0%,#151718_100%)] text-[#ffffff] before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:border before:border-[rgba(255,255,255,0.1)] before:content-['']",
+        "relative flex items-center justify-center bg-[linear-gradient(180deg,#3a4254_0%,#2c3343_100%)] text-[#cf3d4f] before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:border before:border-[rgba(255,255,255,0.1)] before:content-['']",
         size === "titlebar"
           ? "size-5 rounded shadow-sm/20 before:border-white/20"
           : "size-24 rounded-3xl shadow-xl/20",

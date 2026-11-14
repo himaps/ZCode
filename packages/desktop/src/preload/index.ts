@@ -301,6 +301,8 @@ contextBridge.exposeInMainWorld("zcode", {
       reason?: string;
       detail?: string;
     }>,
+  /** 离线激活门禁：退出应用（激活屏退出按钮）。 */
+  activationQuit: (): Promise<void> => ipcRenderer.invoke(ACTIVATION_IPC.quit) as Promise<void>,
   connectRemote: (
     options: RemoteTarget,
     requestId?: string,
