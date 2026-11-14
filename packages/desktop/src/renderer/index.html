@@ -13,6 +13,13 @@
         height: 100%;
       }
 
+      /* 静态启动屏先于 React/主题注入：固定深色底，与 RootStartupLoading 深色观感衔接，
+         避免白屏 → 深屏的整页跳变（用户可见的启动闪烁）。 */
+      html,
+      body {
+        background: #1c1c1c;
+      }
+
       #root {
         opacity: 0;
         transition: opacity 0.16s ease;
@@ -45,7 +52,7 @@
         align-items: center;
         justify-content: center;
         border-radius: 24px;
-        background: linear-gradient(180deg, #000000 0%, #151718 100%);
+        background: linear-gradient(180deg, #3a4254 0%, #2c3343 100%);
         box-shadow:
           0 20px 25px -5px rgb(0 0 0 / 0.2),
           0 8px 10px -6px rgb(0 0 0 / 0.2);
@@ -68,7 +75,7 @@
       .startup-logo {
         width: 56px;
         height: auto;
-        color: #ffffff;
+        color: #cf3d4f;
       }
 
       @keyframes startup-logo-pop {
