@@ -22,14 +22,18 @@ fork-only 功能，不对上游。激活门禁在启动后整屏拦截主 UI；�
 ```
 
 - dpkg 数据库之外，`.license.md` 是激活状态的唯一事实；文件缺失 = 未激活，验证每轮实时进行（无独立状态文件）
-- 数据根：`getDataBaseDir()`（`@zcode/services/node`），默认 `~/.zcode`
+- 许可证路径：`~/.zcode/.license.md`（与其他应用数据聚在一起）。早期版本在 HOME 根
+  （`getDataBaseDir()` 直下），status 检查时对已激活机器做一次性迁移（旧文件解析正确
+  即写入新路径并删除），activate 写入后也会清理旧位置残留
+- 退出按钮：激活面板提供【退出应用】，走专用 `zcode-activation:quit` → `app.quit()`
+  （不经 close-to-tray/确认退出，激活屏上退出语义确定）
 
 ## 代码位置
 
 | 文件 | 职责 |
 | --- | --- |
 | `packages/shared/src/activation.ts` | 纯算法（词表/派生/解析/校验/license 内容），WebCrypto，主进程与渲染层共用 |
-| `packages/desktop/src/main/desktopActivationIpc.ts` | 机器标识读取、license 落盘、`zcode-activation:status/activate` IPC |
+| `packages/desktop/src/main/desktopActivationIpc.ts` | 机器标识读取、license 落盘、`zcode-activation:status/activate/quit` IPC |
 | `packages/desktop/src/preload/index.ts` | `window.zcodeActivation.{status,activate}` |
 | `packages/ui/src/activation/ActivationGate.tsx` | 启动门禁屏（渲染层；桥接缺失即非桌面环境，放行） |
 | `packaging/offline-kit/zcode-activation-tool.html` | 维护者侧离线激活工具（纯静态，WebCrypto） |

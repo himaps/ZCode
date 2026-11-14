@@ -13,8 +13,8 @@ import {
   renderActivationCode,
   verifyActivationInput,
 } from "@zcode/shared";
-import { getDataBaseDir } from "@zcode/services/node";
-import { readFileSync, writeFileSync } from "node:fs";
+import { getDataBaseDir, getZCodeDataRootDir } from "@zcode/services/node";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const execFileAsync = promisify(execFile);
 
@@ -69,9 +69,33 @@ async function readMachineId(): Promise<string> {
   throw new Error(`no machine identifier found (${files.join(", ")})`);
 }
 
-/** 许可证文件路径：用户数据根目录下的 .license.md（离线机用户可写）。 */
+/** 许可证文件路径：~/.zcode/.license.md（与其他应用数据聚在一起；离线机用户可写）。 */
 function licensePath(): string {
-  return join(getDataBaseDir(), ".license.md");
+  return join(getZCodeDataRootDir(), ".license.md");
+}
+
+/**
+ * 早期版本把许可证放在 HOME 根（getDataBaseDir() 直下）。已激活的机器升级到本版后
+ * 不能被迫重新激活：status 检查时若新路径缺失而旧路径存在且软件标识正确，
+ * 一次性迁移到 ~/.zcode/ 并删除旧文件（迁移后旧位置不再被读取）。
+ */
+function migrateLegacyLicenseFile(): void {
+  const legacy = join(getDataBaseDir(), ".license.md");
+  const target = licensePath();
+  try {
+    if (existsSync(target) || !existsSync(legacy)) {
+      return;
+    }
+    const parsed = parseLicenseFile(readFileSync(legacy, "utf8"));
+    if (!parsed.ok) {
+      return;
+    }
+    mkdirSync(getZCodeDataRootDir(), { recursive: true });
+    writeFileSync(target, licenseFileContent(parsed.indices), "utf8");
+    rmSync(legacy, { force: true });
+  } catch {
+    // 迁移失败不阻断启动：下次 status 仍会走旧路径兜底读取前先尝试迁移
+  }
 }
 
 type ActivationStatusPayload = {
@@ -112,6 +136,7 @@ async function buildStatusPayload(): Promise<ActivationStatusPayload> {
 
 export function registerDesktopActivationIpc(): void {
   ipcMain.handle(ACTIVATION_IPC.status, async (): Promise<ActivationStatusPayload> => {
+    migrateLegacyLicenseFile();
     return buildStatusPayload();
   });
 
@@ -141,7 +166,9 @@ export function registerDesktopActivationIpc(): void {
         return { ok: false, reason: verified.reason, detail: verified.detail };
       }
       try {
+        mkdirSync(getZCodeDataRootDir(), { recursive: true });
         writeFileSync(licensePath(), licenseFileContent(verified.indices), "utf8");
+        rmSync(join(getDataBaseDir(), ".license.md"), { force: true });
       } catch (error) {
         return {
           ok: false,
