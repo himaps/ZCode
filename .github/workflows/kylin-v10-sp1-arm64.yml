@@ -465,6 +465,10 @@ jobs:
           cat > /tmp/release-notes.md <<'EOF'
           ## ZCode @VERSION@ — 银河麒麟 V10 SP1 (aarch64) 离线安装包
 
+          > **fork 自行升级版本**：`-fork.n` 后缀表示这是 himaps/ZCode 在上游 zai-org/ZCode
+          > 基线上的自行构建（含离线收敛、激活门禁等 fork 功能），不是上游发行版。
+          > 上游发布任何新版本后仍需合并其代码——fork 版本号不代表上游进度。
+
           - 目标系统：银河麒麟桌面 V10 SP1（2503）aarch64，glibc 2.31（focal 同源基线）
           - 产物：`ZCode-<版本>-kylin-v10-sp1-aarch64-glibc2.31-offline.deb`（应用本体 + 离线依赖闭包 + 补齐脚本）
           - 已通过：GLIBC 符号门禁（<= 2.31）、focal arm64 容器安装验证、零升级断言（绝不升级系统组件）、ldd 零 not found
