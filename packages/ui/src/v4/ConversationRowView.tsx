@@ -19,6 +19,7 @@ import {
   CheckIcon,
   Clock,
   CopyIcon,
+  FileDownIcon,
   FileIcon,
   InfoIcon,
   PencilIcon,
@@ -76,6 +77,7 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning.js";
+import { toast } from "@/components/ui/toast.js";
 import { cn } from "@/components/lib/utils.js";
 import { composerEditSessionKey, useComposerEditStore } from "@/composer-edit-mode/index.js";
 import { WorkflowToolSummary } from "@/v4/WorkflowToolSummary.js";
@@ -1322,6 +1324,15 @@ const UserInputRowView = memo(function UserInputRowView(
 // memo 组件的数组默认值必须是模块级常量：内联 [] 每次渲染都是新引用，会让 memo 比较失效。
 const EMPTY_SOURCE_COMMAND_IDS: readonly string[] = [];
 
+/** 导出 markdown 的建议文件名时间戳：消息创建时间的本地 YYYYMMDD-HHmm（如 20261101-2130）。 */
+function formatMarkdownExportTimestamp(time: number): string {
+  const date = new Date(time);
+  const pad2 = (value: number): string => String(value).padStart(2, "0");
+  return `${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}-${pad2(
+    date.getHours(),
+  )}${pad2(date.getMinutes())}`;
+}
+
 export const ConversationAssistantTextActions = memo(function ConversationAssistantTextActions({
   rowId,
   entityId,
@@ -1363,6 +1374,7 @@ export const ConversationAssistantTextActions = memo(function ConversationAssist
     id: localFeedback === "dislike" ? "chat.message.disliked" : "chat.message.dislike",
   });
   const forkLabel = intl.formatMessage({ id: "chat.message.fork" });
+  const exportLabel = intl.formatMessage({ id: "chat.message.exportMarkdown" });
   const timeLabel = formatMessageTimeLabel(createdAt, locale, intl);
   const resolveTooltip = (label: string): string | undefined =>
     compactForRemoteControl ? undefined : label;
@@ -1428,6 +1440,29 @@ export const ConversationAssistantTextActions = memo(function ConversationAssist
   const handleForkToWorktree = useCallback(() => {
     if (entityId && forkToWorktree) forkToWorktree({ rowId, entityId });
   }, [entityId, forkToWorktree, rowId]);
+  // 导出为 markdown：正文原文经 IPlatformService.saveFile 落盘（桌面=另存为对话框，
+  // Web=浏览器下载；docs/chat/assistant-latest-part-actions.md）。取消静默，成功/失败 toast。
+  const handleExportMarkdown = useCallback(() => {
+    const saveFile = platform?.saveFile?.bind(platform);
+    if (!saveFile || text.length === 0) return;
+    void (async () => {
+      try {
+        const result = await saveFile({
+          data: new TextEncoder().encode(text).buffer as ArrayBuffer,
+          suggestedName: `${formatMarkdownExportTimestamp(createdAt)}.md`,
+        });
+        if (!result.success && !result.canceled) throw new Error(result.error ?? "save_failed");
+        if (!result.canceled) {
+          toast(intl.formatMessage({ id: "chat.message.exportMarkdown.done" }));
+        }
+      } catch (error) {
+        logger.warn("[ConversationRowView] 导出 markdown 失败", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        toast(intl.formatMessage({ id: "chat.message.exportMarkdown.failed" }));
+      }
+    })();
+  }, [createdAt, intl, platform, text]);
   return (
     <MessageActions className={cn(className, "has-[[data-bot-group-delivery]]:opacity-100")}>
       <CopyRowAction
@@ -1498,6 +1533,18 @@ export const ConversationAssistantTextActions = memo(function ConversationAssist
             <TrendingUpDownIcon className="size-3.5" />
           </MessageAction>
         )
+      ) : null}
+      {/* 导出为 markdown：仅在平台支持 saveFile（桌面/Web）且正文非空时出现。 */}
+      {platform?.saveFile && text.length > 0 ? (
+        <MessageAction
+          aria-label={exportLabel}
+          label={exportLabel}
+          tooltip={resolveTooltip(exportLabel)}
+          data-testid={`v4-export-markdown-${rowId}`}
+          onClick={handleExportMarkdown}
+        >
+          <FileDownIcon className="size-3.5" />
+        </MessageAction>
       ) : null}
       {turnId && hookInvocations ? (
         <ConversationHookDetailsAction rows={hookInvocations} turnId={turnId} />

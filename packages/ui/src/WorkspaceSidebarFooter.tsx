@@ -5,7 +5,6 @@ import type { Locale, UserInfo } from "@zcode/shared";
 import { memo, useCallback, useEffect, useState, type ReactNode } from "react";
 import { DesktopCommandIds, LOCALE_NATIVE_NAMES, UI_ENABLED_LOCALES } from "@zcode/shared";
 import {
-  TID_LOGIN_MENU_ITEM,
   TID_LOGIN_TRIGGER,
   TID_LOGOUT_BUTTON,
   TID_TASK_SETTINGS_BUTTON,
@@ -32,7 +31,6 @@ import {
   PencilRuler,
   Globe,
   LoaderCircle,
-  LogInIcon,
   LogOut,
   Maximize,
   Palette,
@@ -71,15 +69,14 @@ function getSidebarProfileName(user?: UserInfo | null): string {
   return "ZCode";
 }
 
-function getSidebarProfileBadge(
-  user: UserInfo | null | undefined,
-  formatMessage: ReturnType<typeof useZCodeIntl>["intl"]["formatMessage"],
-): string {
+function getSidebarProfileBadge(user: UserInfo | null | undefined): string {
   if (user) {
     return getSidebarProfileName(user);
   }
 
-  return formatMessage({ id: "sidebar.profile.notLoggedIn" });
+  // 离线 fork：内网无云端账号登录，未登录时仅保留头像（用户标识），
+  // 不再显示“连接使用”文案（docs/kylin-offline-divergences.md §1）。
+  return "";
 }
 
 function getAvatarFallbackText(user: UserInfo | null | undefined): string {
@@ -94,7 +91,6 @@ export const WorkspaceSidebarFooter = memo(function WorkspaceSidebarFooterCompon
   onThemeChange,
   onSettingsButtonClick,
   onUsageClick,
-  onLogin,
   onLogout,
   settingsButtonMode = "settings",
   user,
@@ -112,6 +108,7 @@ export const WorkspaceSidebarFooter = memo(function WorkspaceSidebarFooterCompon
   onThemeChange: (value: string) => void;
   onSettingsButtonClick?: () => void;
   onUsageClick?: () => void;
+  /** 离线 fork：类型保留兼容调用方传参，但组件不再消费（内网无账号登录入口，菜单项已移除）。 */
   onLogin?: () => void;
   onLogout?: () => void;
   settingsButtonMode?: "settings" | "back";
@@ -132,7 +129,7 @@ export const WorkspaceSidebarFooter = memo(function WorkspaceSidebarFooterCompon
   const zoomOutShortcutLabel = useShortcutCommandLabel("zoomOut");
   const resetZoomShortcutLabel = useShortcutCommandLabel("resetZoom");
   const isRestoringOAuthSession = useZCodeStore((state) => state.isRestoringOAuthSession);
-  const profileBadge = getSidebarProfileBadge(user, intl.formatMessage);
+  const profileBadge = getSidebarProfileBadge(user);
   const avatarFallbackText = getAvatarFallbackText(user);
   const avatarKey = user?.avatarUrl ?? user?.id ?? "guest";
   const showAuthRestoreLoading = !user && isRestoringOAuthSession;
@@ -172,9 +169,12 @@ export const WorkspaceSidebarFooter = memo(function WorkspaceSidebarFooterCompon
       </Avatar>
       <div className="min-w-0 flex-1 overflow-hidden text-left">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="min-w-0 truncate text-ui-base font-semibold text-foreground">
-            {profileBadge}
-          </span>
+          {/* 未登录（离线 fork）时 badge 为空串：仅保留头像，不渲染“连接使用”文案。 */}
+          {profileBadge ? (
+            <span className="min-w-0 truncate text-ui-base font-semibold text-foreground">
+              {profileBadge}
+            </span>
+          ) : null}
         </div>
       </div>
     </>
@@ -237,7 +237,7 @@ export const WorkspaceSidebarFooter = memo(function WorkspaceSidebarFooterCompon
               size={"lg"}
               className="min-w-0 flex-1 justify-start gap-2 overflow-hidden rounded-tl-2xl rounded-bl-2xl border-0 pl-0"
               data-testid={TID_LOGIN_TRIGGER}
-              aria-label={profileBadge}
+              aria-label={profileBadge || "ZCode"}
             >
               {/* Bugfix: Button 默认 shrink-0 且带 whitespace-nowrap，超长用户名会把 footer 撑出 sidebar。
                 这里让触发按钮和文本列都允许收缩，并只在用户名自身做单行截断。 */}
@@ -425,15 +425,8 @@ export const WorkspaceSidebarFooter = memo(function WorkspaceSidebarFooterCompon
               onUsageClick={usageButtonClick}
             />
             {/* 邀请好友入口已移除（离线交付不暴露邀请返利功能）。 */}
-            {onLogin && !user ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={onLogin} data-testid={TID_LOGIN_MENU_ITEM}>
-                  <LogInIcon className="size-4" />
-                  {intl.formatMessage({ id: "app.login" })}
-                </DropdownMenuItem>
-              </>
-            ) : null}
+            {/* 【连接使用】菜单项已移除（离线 fork：内网无云端账号登录，
+                见 docs/kylin-offline-divergences.md §1）。 */}
             {onLogout ? <DropdownMenuSeparator /> : null}
             {onLogout ? (
               <DropdownMenuItem onSelect={onLogout} data-testid={TID_LOGOUT_BUTTON}>

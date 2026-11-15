@@ -13,6 +13,7 @@ himaps/ZCode 是 zai-org/ZCode 的 fork（不向上游 PR），为国产化离�
 | 界面语言仅中文/英文 | `packages/shared/src/protocol.ts` `UI_ENABLED_LOCALES` | 两处下拉（`settingsPageHelpers.tsx`、`WorkspaceSidebarFooter.tsx`）消费白名单而非 `SUPPORTED_LOCALES`；上游新增语言资源继续随包、类型不变 |
 | 语音输入组件移除 | `packages/ui/src/components/ai-elements/speech-input.tsx` | 文件删除（上游本就无挂载点，属孤儿组件；若上游将来挂载需重新评估） |
 | provider 登录引导关闭 | `packages/ui/src/lib/rootStartupGate.ts` `shouldEnableProviderAvailabilityLoginEntryGuard` | 固定返回 false：内网/离线使用不配置云端账号，跳过【输入 API Key / 暂时跳过】引导直达主界面；激活门禁（ActivationGate）独立负责激活拦截 |
+| 左下角【连接使用】入口移除 | `packages/ui/src/WorkspaceSidebarFooter.tsx` | ①删弹窗菜单末项【连接使用】（`app.login` 菜单项，点击会拉起云端账号登录，内网不可用）；②未登录时触发区仅保留头像，不显示"连接使用"文案（`getSidebarProfileBadge` 未登录 fallback 返回空串，span 条件渲染，aria-label 兜底 "ZCode"）；`onLogin` prop 类型保留但组件不再解构消费，传参无害（内网无账号登录入口）。合并后核对：菜单内不得再现 `app.login` 项，未登录 footer 不得出现 `sidebar.profile.notLoggedIn` 文案 |
 
 相关 e2e（本流水线不跑，本地跑会红）：`marketing-touch-rewards.test.ts`（rewards 菜单与升级按钮断言）、coding-plan-upgrade 相关 e2e。
 

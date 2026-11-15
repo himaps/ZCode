@@ -1,8 +1,8 @@
 # Assistant Row Actions（当前事实）
 
-Assistant turn 的操作区提供 copy、赞、踩、fork、retry，并在末尾展示该 assistant 消息的
-创建时间。操作区只挂在一轮最后一段已完成的 assistant 正文后；一轮有多个 text part 时，
-不在中间 part 重复展示。
+Assistant turn 的操作区提供 copy、赞、踩、fork、导出为 markdown、retry，并在末尾展示该
+assistant 消息的创建时间。操作区只挂在一轮最后一段已完成的 assistant 正文后；一轮有多个
+text part 时，不在中间 part 重复展示。
 
 ## 行为
 
@@ -18,6 +18,12 @@ Assistant turn 的操作区提供 copy、赞、踩、fork、retry，并在末尾
 - Retry 发送 V4 `retryTurn`，目标是对应 turn/row。
 - Fork 发送 V4 `forkAssistant`，成功 ACK 返回 child sessionId，随后由权威
   sessions/projection 收敛。
+- 【导出为 markdown】位于 fork 之后：把该 assistant 消息的原始正文（markdown 源文本，非
+  渲染结果）经 `IPlatformService.saveFile` 落盘。桌面端弹系统"另存为"对话框
+  （`defaultPath` = 建议文件名），Web 端走浏览器下载；建议文件名为消息创建时间的本地
+  时间戳 `YYYYMMDD-HHmm.md`（如 `20261101-2130.md`）。用户取消（`canceled`）静默不提示；
+  成功 toast「已导出为 markdown 文件」；失败 toast「导出失败，请重试」。平台未实现
+  `saveFile` 或正文为空时按钮不渲染。
 - 时间来自 CLI 投影的 `AssistantTextRow.createdAt`，表达消息创建时间，不是本轮工作耗时。
   当天只显示时分，昨天显示“昨天 + 时分”，当年更早显示月日和时分，跨年显示年月日和
   时分；无效或非正时间戳不展示，避免出现 1970 年占位时间。
