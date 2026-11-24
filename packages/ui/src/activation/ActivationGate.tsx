@@ -182,7 +182,9 @@ export function ActivationGate({
               {machineWords.map((word, index) => (
                 <span
                   key={`${word}-${index}`}
-                  className="rounded-lg border border-primary/20 bg-background px-3 py-1.5 text-lg font-semibold tracking-wide text-foreground"
+                  // 离线 fork：机器码（注册码）用定制图标品牌红 #cf3d4f（同启动屏 Z 徽章），
+                  // 与激活码输入的绿色区分（docs/kylin-offline-divergences.md §1）。
+                  className="rounded-lg border border-primary/20 bg-background px-3 py-1.5 text-lg font-semibold tracking-wide text-[#cf3d4f]"
                 >
                   {word}
                 </span>
@@ -203,9 +205,9 @@ export function ActivationGate({
                 if (event.key === "Enter" && !submitting) void submit();
               }}
               placeholder="4 个词语，用 - 连接"
-              // 离线 fork：注册码文字用定制图标品牌红（#cf3d4f，同启动屏 Z 徽章），
-              // 与内网交付视觉一致（docs/kylin-offline-divergences.md §1）。
-              className="mt-2 h-11 border-primary/30 text-base tracking-wide text-[#cf3d4f]"
+              // 离线 fork：激活码文字用成功绿（text-success，随主题），与机器码的品牌红
+              // #cf3d4f 区分（docs/kylin-offline-divergences.md §1）。
+              className="mt-2 h-11 border-primary/30 text-base tracking-wide text-success"
               autoComplete="off"
               spellCheck={false}
               autoFocus
