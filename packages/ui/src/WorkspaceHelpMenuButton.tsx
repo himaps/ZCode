@@ -101,8 +101,9 @@ export function WorkspaceHelpMenuButton({
         </DropdownMenuItem>
         {/* Windows/Linux 没有原生菜单栏，自绘标题栏箭头菜单也已下线，
             资源管理器只能从这里进；Web 端没有该窗口，不渲染。
-            离线 fork：移除 用户社群/问题上报/提交漏洞/给产品提需求 四个云端入口
-            （docs/kylin-offline-divergences.md §1）。 */}
+            离线 fork：移除 用户社群/问题上报/提交漏洞/给产品提需求/检查更新 五个云端入口，
+            并移除 4.0.0 的「预装工具」入口（离线内网无法下载预装工具；底层
+            scripts/preinstalled-tools 管线暂留死代码，docs/kylin-offline-divergences.md §1）。 */}
         {isDesktop ? (
           <>
             <DropdownMenuSeparator />

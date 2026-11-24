@@ -215,6 +215,8 @@ export {
   sanitizeTelemetryErrorMessage,
   sanitizeTelemetrySkillName,
   sanitizeTelemetryEventDetail,
+  normalizeToolErrorCode,
+  sanitizeToolErrorCode,
 } from "./telemetry.js";
 export type {
   RedactTelemetryTextOptions,
@@ -416,6 +418,7 @@ export * from "./session-debug.js";
 export { redactFeedbackText } from "./feedbackPrivacy.js";
 export { API_KEY_USAGE_SCENE, type ApiKeyCreationUsageScene } from "./api-key-usage-scene.js";
 export {
+  isProjectTokenTransportFailureCode,
   projectAccessTokenFingerprint,
   projectAccessTokenRetryAfterMs,
   ProjectAccessTokenError,

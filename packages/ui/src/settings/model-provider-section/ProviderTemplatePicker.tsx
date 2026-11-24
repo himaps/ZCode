@@ -1,7 +1,7 @@
 import type { ProviderSettingsView } from "@zcode/services";
 import { ArrowLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import { resolveProviderTemplateName } from "@zcode/provider";
-import { toZhOrEnLocale } from "@zcode/shared";
+import { OFFICIAL_PROVIDER_TEMPLATE_IDS, toZhOrEnLocale } from "@zcode/shared";
 import type { ReactNode } from "react";
 import {
   TID_MODEL_PROVIDER_TEMPLATE_BACK_BUTTON,
@@ -39,14 +39,15 @@ export function ProviderTemplatePicker({
   const { intl, locale } = useZCodeIntl();
   const { dismissFeedback, showFeedback } = useProviderDetailFeedback();
   const customLabel = intl.formatMessage({ id: "settings.modelProvider.newProviderName" });
-  const zhipuIds = ["bigmodel-api", "zai-api", "bigmodel-standard-api", "zai-standard-api"];
   // 离线 fork：隐藏预置厂商模板，两组模板都置空，仅保留「创建自定义供应商」卡片。
-  const zhipuTemplates = FORK_OFFLINE_HIDE_PRESET_TEMPLATES
-    ? []
-    : zhipuIds.flatMap((id) => templates.filter((template) => template.templateId === id));
+  // 4.0.0 起厂商模板 ID 由 shared OFFICIAL_PROVIDER_TEMPLATE_IDS 统一定义。
+  const officialTemplates = OFFICIAL_PROVIDER_TEMPLATE_IDS.flatMap((id) =>
+    templates.filter((template) => template.templateId === id),
+  );
+  const zhipuTemplates = FORK_OFFLINE_HIDE_PRESET_TEMPLATES ? [] : officialTemplates;
   const otherTemplates = FORK_OFFLINE_HIDE_PRESET_TEMPLATES
     ? []
-    : templates.filter((template) => !zhipuIds.includes(template.templateId));
+    : templates.filter((template) => !OFFICIAL_PROVIDER_TEMPLATE_IDS.includes(template.templateId));
   const groups = [
     {
       id: "zhipu",
