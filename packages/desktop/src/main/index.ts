@@ -2412,28 +2412,22 @@ app.whenReady().then(async () => {
   }
   applicationLocaleResolved = true;
 
-  // 离线 fork：预装工具（LibreOffice/QPDF/Pandoc/Poppler/Python）走网络分发与自动安装，
-  // 内网无法使用。不启动预装进程，整条管线（coordinator/bridge/帮助菜单入口）保持死代码，
-  // 降低上游合并面（docs/kylin-offline-divergences.md §1）。
-  const FORK_OFFLINE_DISABLE_PREINSTALLED_TOOLS = true;
-  if (!FORK_OFFLINE_DISABLE_PREINSTALLED_TOOLS) {
-    // 清单只属于预装进程；异步读取不能成为 Host 或聊天的启动屏障。
-    const preinstalledToolsConfiguration = loadPreinstalledToolsCatalog(logger).then((tools) => ({
-      dataRoot: getZCodeDataRootDir(),
-      release: resolvePreinstalledToolsRelease({
-        runtimeEnv: desktopRuntimeEnv,
-        productFlavor: ZCODE_PRODUCT_FLAVOR,
-      }),
-      tools,
-      windowsEntryShim: resolvePreinstalledEntryShimPath(),
-    }));
-    preinstalledToolsProcess = spawnPreinstalledToolsProcess({
-      configuration: preinstalledToolsConfiguration,
-      hostProcessLocalEnv,
-      logger,
-      windows: getMainApplicationWindows,
-    });
-  }
+  // 清单只属于预装进程；异步读取不能成为 Host 或聊天的启动屏障。
+  const preinstalledToolsConfiguration = loadPreinstalledToolsCatalog(logger).then((tools) => ({
+    dataRoot: getZCodeDataRootDir(),
+    release: resolvePreinstalledToolsRelease({
+      runtimeEnv: desktopRuntimeEnv,
+      productFlavor: ZCODE_PRODUCT_FLAVOR,
+    }),
+    tools,
+    windowsEntryShim: resolvePreinstalledEntryShimPath(),
+  }));
+  preinstalledToolsProcess = spawnPreinstalledToolsProcess({
+    configuration: preinstalledToolsConfiguration,
+    hostProcessLocalEnv,
+    logger,
+    windows: getMainApplicationWindows,
+  });
 
   // scheduler 也会打开 tasks-index；等 Host 完成统一准备，避免在启动页出现前抢先迁移。
   configureDatabaseStartupQuit(() => {
