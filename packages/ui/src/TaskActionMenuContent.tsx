@@ -33,7 +33,6 @@ export function TaskActionMenuContent({
   onMarkTaskAsUnread,
   onRestartTask,
   restartPending = false,
-  onOpenTaskFeedback,
   onOpenTaskPathInFileManager,
   onCopyWorkspacePath,
   onCopyTaskPath,
@@ -72,7 +71,6 @@ export function TaskActionMenuContent({
   onMarkTaskAsUnread: () => void;
   onRestartTask?: () => void;
   restartPending?: boolean;
-  onOpenTaskFeedback?: () => void;
   onOpenTaskPathInFileManager: () => void;
   onCopyWorkspacePath: () => void;
   onCopyTaskPath: () => void;
@@ -221,16 +219,7 @@ export function TaskActionMenuContent({
           </Item>
         </>
       ) : null}
-      {onOpenTaskFeedback ? (
-        <>
-          <Separator />
-          <Item disabled={taskTargetActionsDisabled} onSelect={onOpenTaskFeedback}>
-            {/* Bugfix: 任务菜单之前只有复制日志/路径，用户遇到任务问题时还要手动回到反馈中心。
-                “反馈问题”不是任务管理动作，单独放在菜单底部更符合兜底求助入口的层级。 */}
-            {intl.formatMessage({ id: "taskList.feedback" })}
-          </Item>
-        </>
-      ) : null}
+      {/* 离线 fork：移除任务菜单「反馈问题」入口（内网无云端反馈，docs/kylin-offline-divergences.md §1）。 */}
     </>
   );
 }

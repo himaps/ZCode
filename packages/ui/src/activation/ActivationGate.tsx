@@ -203,7 +203,9 @@ export function ActivationGate({
                 if (event.key === "Enter" && !submitting) void submit();
               }}
               placeholder="4 个词语，用 - 连接"
-              className="mt-2 h-11 border-primary/30 text-base tracking-wide"
+              // 离线 fork：注册码文字用定制图标品牌红（#cf3d4f，同启动屏 Z 徽章），
+              // 与内网交付视觉一致（docs/kylin-offline-divergences.md §1）。
+              className="mt-2 h-11 border-primary/30 text-base tracking-wide text-[#cf3d4f]"
               autoComplete="off"
               spellCheck={false}
               autoFocus

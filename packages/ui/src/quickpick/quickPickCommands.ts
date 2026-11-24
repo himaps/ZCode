@@ -235,24 +235,7 @@ export function createQuickPickCommands({
     },
   ];
 
-  commands.push({
-    id: "feedback",
-    sectionId: "app",
-    titleId: "quickPick.command.feedback",
-    icon: "feedback",
-    keywords: [
-      "feedback",
-      "issue",
-      "support",
-      "tickets",
-      "问题上报",
-      "问题反馈",
-      "反馈",
-      "我的反馈",
-      "工单",
-    ],
-    run: handlers.openFeedback,
-  });
+  // 离线 fork：移除「问题上报」快捷指令（内网无云端反馈通道，docs/kylin-offline-divergences.md §1）。
 
   if (canOpenCommunity) {
     commands.push({

@@ -562,6 +562,8 @@ const appSettingsObjectSchema = z.object({
   desktopWindowSize: desktopWindowSizeSchema.optional(),
   desktopChromiumHardwareAccelerationEnabled: z.boolean().default(true),
   messageStreamShowReasoning: z.boolean().default(true),
+  // 离线 fork：复制/导出助手消息时是否包含思考/工作日志（默认 false = 只复制最终答案）。
+  includeThinkingInCopy: z.boolean().default(false),
   messageStreamShowReasoningMigrationInitialized: z.boolean().default(true),
   messageStreamShowTodos: z.boolean().default(false),
   zcodeInteractionBehavior: zcodeInteractionBehaviorSchema.default("queue"),
@@ -660,6 +662,7 @@ export const appSettingsPatchSchema = z.object({
   desktopWindowSize: desktopWindowSizeSchema.optional(),
   desktopChromiumHardwareAccelerationEnabled: z.boolean().optional(),
   messageStreamShowReasoning: z.boolean().optional(),
+  includeThinkingInCopy: z.boolean().optional(),
   messageStreamShowReasoningMigrationInitialized: z.boolean().optional(),
   messageStreamShowTodos: z.boolean().optional(),
   zcodeInteractionBehavior: zcodeInteractionBehaviorSchema.optional(),

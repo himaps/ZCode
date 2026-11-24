@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
-import { Checkbox } from "@/components/ui/checkbox.js";
 import { Progress } from "@/components/ui/progress.js";
 import type { IntlInstance } from "@/i18n/IntlProvider.js";
 import type { UpdateStatusDialogPhase } from "@/updateStatusModel.js";
@@ -25,8 +24,6 @@ export function UpdateStatusDialog({
   edgeToEdge = false,
   intl,
   isUpdateActionPending,
-  autoDownloadAndInstallUpdates,
-  onAutoDownloadAndInstallUpdatesChange,
   onCancelDownload,
   onDownloadUpdate,
   onOpenChange,
@@ -44,9 +41,7 @@ export function UpdateStatusDialog({
   edgeToEdge?: boolean;
   intl: IntlInstance;
   isUpdateActionPending: boolean;
-  autoDownloadAndInstallUpdates: boolean;
   localizedUpdateReleaseNotes: LocalizedUpdateReleaseNotes | null;
-  onAutoDownloadAndInstallUpdatesChange: (enabled: boolean) => Promise<void>;
   onCancelDownload: () => Promise<void>;
   onDownloadUpdate: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
@@ -149,22 +144,6 @@ export function UpdateStatusDialog({
       ) : null}
 
       <div className={cn("[app-region:no-drag]", isDownloading ? "-mt-2" : null)}>
-        {isBeforeDownload ? (
-          <label className="mb-4 flex min-w-0 items-center gap-2 text-ui-base leading-5 text-foreground">
-            <Checkbox
-              checked={autoDownloadAndInstallUpdates}
-              disabled={isUpdateActionPending}
-              onCheckedChange={(checked) => {
-                void onAutoDownloadAndInstallUpdatesChange(checked === true);
-              }}
-            />
-            <span className="min-w-0">
-              {intl.formatMessage({
-                id: "updateDialog.autoDownloadAndInstall",
-              })}
-            </span>
-          </label>
-        ) : null}
         <DialogFooter
           className={cn(
             "p-0 [app-region:no-drag]",

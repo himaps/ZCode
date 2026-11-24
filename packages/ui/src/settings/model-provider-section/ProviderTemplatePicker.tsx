@@ -19,6 +19,10 @@ import { useProviderDetailFeedback } from "./ProviderDetailFeedback.js";
 type ProviderTemplateCreate = (templateId: string) => Promise<void>;
 type CustomProviderCreate = (label: string) => Promise<void>;
 
+// 离线 fork：添加供应商弹窗只保留「创建自定义供应商」，隐藏预置厂商模板
+// （docs/kylin-offline-divergences.md §1）。
+const FORK_OFFLINE_HIDE_PRESET_TEMPLATES = true;
+
 export function ProviderTemplatePicker({
   templates,
   onBack,
@@ -36,16 +40,21 @@ export function ProviderTemplatePicker({
   const { dismissFeedback, showFeedback } = useProviderDetailFeedback();
   const customLabel = intl.formatMessage({ id: "settings.modelProvider.newProviderName" });
   const zhipuIds = ["bigmodel-api", "zai-api", "bigmodel-standard-api", "zai-standard-api"];
+  // 离线 fork：隐藏预置厂商模板，两组模板都置空，仅保留「创建自定义供应商」卡片。
+  const zhipuTemplates = FORK_OFFLINE_HIDE_PRESET_TEMPLATES
+    ? []
+    : zhipuIds.flatMap((id) => templates.filter((template) => template.templateId === id));
+  const otherTemplates = FORK_OFFLINE_HIDE_PRESET_TEMPLATES
+    ? []
+    : templates.filter((template) => !zhipuIds.includes(template.templateId));
   const groups = [
     {
       id: "zhipu",
-      templates: zhipuIds.flatMap((id) =>
-        templates.filter((template) => template.templateId === id),
-      ),
+      templates: zhipuTemplates,
     },
     {
       id: "other",
-      templates: templates.filter((template) => !zhipuIds.includes(template.templateId)),
+      templates: otherTemplates,
     },
   ] as const;
   const createWithFeedback = async (create: () => Promise<void>) => {
@@ -88,7 +97,10 @@ export function ProviderTemplatePicker({
       </div>
 
       <div className="space-y-6">
-        {groups.map((group) => (
+        {groups
+          // 空分组（离线 fork 下 zhipu 组无模板）不渲染空标题；other 组始终保留（含自定义卡片）。
+          .filter((group) => group.templates.length > 0 || group.id === "other")
+          .map((group) => (
           <section key={group.id} data-provider-template-group={group.id} className="space-y-3">
             <h3 className="text-ui-base font-medium text-foreground-subtle">
               {intl.formatMessage({ id: `settings.modelProvider.templateGroup.${group.id}` })}

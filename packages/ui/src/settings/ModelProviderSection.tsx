@@ -79,6 +79,10 @@ export {
   resolveEndpointSuggestionOpenRequest,
 } from "./model-provider-section/utils.js";
 
+// 离线 fork：内网无法连接模型厂商服务（Z.ai / BigModel 及其套餐）。模型设置只保留
+// 「自定义供应商」，预置厂商一律隐藏（docs/kylin-offline-divergences.md §1）。
+const FORK_OFFLINE_HIDE_PRESET_PROVIDERS = true;
+
 type CodingPlanConnectionNavItem = Extract<
   ModelProviderNavGroup["items"][number],
   { type: "codingPlan" | "teamPlan" }
@@ -597,20 +601,22 @@ export function ModelProviderSection({
     };
   }, [providerConnectionRefreshSignal, refreshCodingPlanPurchaseTokenState]);
 
-  const presetProviders = useMemo(
-    () =>
-      PRESET_PROVIDER_SPECS.filter((preset) =>
-        shouldShowPresetProviderForActiveOAuth(
-          preset.id,
-          effectiveProviderFamilyDomain,
-          accountAvailability?.families,
-        ),
-      ).map((preset) => ({
-        ...preset,
-        provider: modelProviders.find((provider) => provider.providerId === preset.id) ?? null,
-      })),
-    [effectiveProviderFamilyDomain, accountAvailability, modelProviders],
-  );
+  const presetProviders = useMemo(() => {
+    if (FORK_OFFLINE_HIDE_PRESET_PROVIDERS) {
+      // 离线 fork：预置厂商隐藏，返回空集合（保留原有计算以便合并上游时恢复）。
+      return [];
+    }
+    return PRESET_PROVIDER_SPECS.filter((preset) =>
+      shouldShowPresetProviderForActiveOAuth(
+        preset.id,
+        effectiveProviderFamilyDomain,
+        accountAvailability?.families,
+      ),
+    ).map((preset) => ({
+      ...preset,
+      provider: modelProviders.find((provider) => provider.providerId === preset.id) ?? null,
+    }));
+  }, [effectiveProviderFamilyDomain, accountAvailability, modelProviders]);
 
   useEffect(() => {
     if (!presetSubscriptionProviderId) {

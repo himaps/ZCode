@@ -18,7 +18,6 @@ export type SettingsSectionId =
   | "plugins"
   | "projects"
   | "archives"
-  | "shares"
   | "usage"
   | "subagents"
   | "commands"
@@ -86,7 +85,6 @@ function isSettingsSectionId(value: string): value is SettingsSectionId {
     value === "plugins" ||
     value === "projects" ||
     value === "archives" ||
-    value === "shares" ||
     value === "usage" ||
     value === "subagents" ||
     value === "commands" ||

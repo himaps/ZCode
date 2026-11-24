@@ -711,7 +711,6 @@ function RootInner({
     handleOpenFolderFromWorkspaceMenu,
     handleCreateTask,
     handleBackFromSettings,
-    handleOpenTaskFromSettings,
   } = useRootWorkspaceActions({
     intl,
     platform,
@@ -1518,7 +1517,6 @@ function RootInner({
     isWebRemoteControl: Boolean(webRemoteControlWorkspaceSwitcher),
     captionWorkspacePath: activeWorkspacePath,
     onBack: activeWorkspacePath ? handleBackFromSettings : undefined,
-    onOpenTask: handleOpenTaskFromSettings,
     onCreateTask: handleCreateTask,
     onOpenWorkspace: handleOpenWorkspace,
     allowOpenWorkspace,
@@ -1663,7 +1661,6 @@ function RootInner({
                 remoteWorkspaceSessions={remoteWorkspaceSessions}
                 allowRemoteWorkspace={allowRemoteWorkspace}
                 handleBackFromSettings={handleBackFromSettings}
-                handleOpenTaskFromSettings={handleOpenTaskFromSettings}
                 handleLogout={user ? handleLogout : undefined}
                 onLogin={!user ? handleOpenLoginEntry : undefined}
                 user={user}

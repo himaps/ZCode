@@ -147,7 +147,6 @@ export function GeneralSectionContent({
   onMobilePushEnabledChange = async () => {},
   desktopChromiumHardwareAccelerationEnabled = true,
   receivePreviewUpdates,
-  autoDownloadAndInstallUpdates,
   dataBaseDir,
   terminalInheritSystemProfile = true,
   terminalFontFamily = "",
@@ -177,7 +176,6 @@ export function GeneralSectionContent({
   onKeepAwakeWhileRunningChange = async () => {},
   onDesktopChromiumHardwareAccelerationChange = async () => {},
   onReceivePreviewUpdatesChange,
-  onAutoDownloadAndInstallUpdatesChange,
   onOpenOnboardingDialog,
 }: {
   localePreference: LocalePreference;
@@ -192,7 +190,6 @@ export function GeneralSectionContent({
   onMobilePushEnabledChange?: (enabled: boolean) => Promise<void>;
   desktopChromiumHardwareAccelerationEnabled?: boolean;
   receivePreviewUpdates: boolean;
-  autoDownloadAndInstallUpdates: boolean;
   dataBaseDir: string;
   terminalInheritSystemProfile: boolean;
   terminalFontFamily: string;
@@ -232,7 +229,6 @@ export function GeneralSectionContent({
   onKeepAwakeWhileRunningChange?: (enabled: boolean) => Promise<void>;
   onDesktopChromiumHardwareAccelerationChange?: (enabled: boolean) => Promise<void>;
   onReceivePreviewUpdatesChange: (enabled: boolean) => Promise<void>;
-  onAutoDownloadAndInstallUpdatesChange: (enabled: boolean) => Promise<void>;
   onOpenOnboardingDialog: () => void;
 }) {
   const { intl } = useZCodeIntl();
@@ -643,26 +639,6 @@ export function GeneralSectionContent({
                 />
               }
             />
-            <SettingsRow
-              searchId="settings.autoDownloadAndInstallUpdates"
-              label={intl.formatMessage({
-                id: "settings.autoDownloadAndInstallUpdates",
-              })}
-              description={intl.formatMessage({
-                id: "settings.autoDownloadAndInstallUpdatesDescription",
-              })}
-              control={
-                <Switch
-                  aria-label={intl.formatMessage({
-                    id: "settings.autoDownloadAndInstallUpdates",
-                  })}
-                  checked={autoDownloadAndInstallUpdates}
-                  onCheckedChange={(checked) => {
-                    void onAutoDownloadAndInstallUpdatesChange(checked);
-                  }}
-                />
-              }
-            />
           </>
         ) : null}
         <SettingsRow
@@ -796,12 +772,14 @@ export function AgentBehaviorSectionContent({
   nativeSearchEnhancementsEnabled,
   messageStreamShowReasoning,
   messageStreamShowTodos,
+  includeThinkingInCopy = false,
   zcodeInteractionBehavior,
   askUserQuestionAutoResolutionEnabled = true,
   modelIoFullRetentionEnabled = false,
   onNativeSearchEnhancementsEnabledChange,
   onMessageStreamShowReasoningChange,
   onMessageStreamShowTodosChange,
+  onIncludeThinkingInCopyChange,
   onZCodeInteractionBehaviorChange,
   onAskUserQuestionAutoResolutionEnabledChange = async () => {},
   onModelIoFullRetentionEnabledChange = async () => {},
@@ -811,12 +789,14 @@ export function AgentBehaviorSectionContent({
   nativeSearchEnhancementsEnabled: boolean;
   messageStreamShowReasoning: boolean;
   messageStreamShowTodos: boolean;
+  includeThinkingInCopy?: boolean;
   zcodeInteractionBehavior: ZCodeInteractionBehavior;
   askUserQuestionAutoResolutionEnabled?: boolean;
   modelIoFullRetentionEnabled?: boolean;
   onNativeSearchEnhancementsEnabledChange: (enabled: boolean) => Promise<void>;
   onMessageStreamShowReasoningChange: (enabled: boolean) => Promise<void>;
   onMessageStreamShowTodosChange: (enabled: boolean) => Promise<void>;
+  onIncludeThinkingInCopyChange: (enabled: boolean) => Promise<void>;
   onZCodeInteractionBehaviorChange: (behavior: ZCodeInteractionBehavior) => Promise<void>;
   onAskUserQuestionAutoResolutionEnabledChange?: (enabled: boolean) => Promise<void>;
   onModelIoFullRetentionEnabledChange?: (enabled: boolean) => Promise<void>;
@@ -984,6 +964,22 @@ export function AgentBehaviorSectionContent({
               checked={messageStreamShowTodos}
               onCheckedChange={(checked) => {
                 void onMessageStreamShowTodosChange(checked);
+              }}
+            />
+          }
+        />
+        <SettingsRow
+          searchId="settings.includeThinkingInCopy"
+          label={intl.formatMessage({ id: "settings.includeThinkingInCopy" })}
+          description={intl.formatMessage({
+            id: "settings.includeThinkingInCopyDescription",
+          })}
+          control={
+            <Switch
+              aria-label={intl.formatMessage({ id: "settings.includeThinkingInCopy" })}
+              checked={includeThinkingInCopy}
+              onCheckedChange={(checked) => {
+                void onIncludeThinkingInCopyChange(checked);
               }}
             />
           }

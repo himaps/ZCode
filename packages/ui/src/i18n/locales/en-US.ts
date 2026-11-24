@@ -3948,6 +3948,9 @@ const enUS: Record<string, string> = {
     "Show full reasoning inside the message stream. When off, the first reasoning item in each turn remains visible.",
   "settings.messageStreamShowTodos": "Show todos",
   "settings.messageStreamShowTodosDescription": "Show Todo tool cards inside the message stream. ",
+  "settings.includeThinkingInCopy": "Include thinking in copy/export",
+  "settings.includeThinkingInCopyDescription":
+    "When enabled, Copy and Export-as-markdown include the earlier work log / thinking. Default is off: only the final answer is copied.",
   "settings.zcodeInteractionBehavior": "Interaction behavior",
   "settings.zcodeInteractionBehaviorDescription":
     "While ZCode is running, add follow-up actions to the queue or guide them to run after the next tool call.",

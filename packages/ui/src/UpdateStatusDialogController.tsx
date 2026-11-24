@@ -30,7 +30,6 @@ export function UpdateStatusDialogController({
 }) {
   const { intl, locale } = useZCodeIntl();
   const requestConfirmation = useConfirmDialog();
-  const [autoDownloadAndInstallUpdates, setAutoDownloadAndInstallUpdates] = useState(false);
   const [updateActionInFlight, setUpdateActionInFlightState] = useState<UpdateActionInFlight>(null);
   const updateActionInFlightRef = useRef<typeof updateActionInFlight>(null);
   const releaseNotesCacheRef = useRef(
@@ -85,34 +84,6 @@ export function UpdateStatusDialogController({
   }, [updateStatusViewModel]);
 
   useEffect(() => {
-    let disposed = false;
-
-    const refreshAutoUpdatePreferences = () => {
-      void platform
-        .getAutoUpdatePreferences?.()
-        .then((preferences) => {
-          if (!disposed) {
-            setAutoDownloadAndInstallUpdates(preferences.autoDownloadAndInstallUpdates);
-          }
-        })
-        .catch(() => {
-          if (!disposed) {
-            setAutoDownloadAndInstallUpdates(false);
-          }
-        });
-    };
-
-    refreshAutoUpdatePreferences();
-    const disposeSettingsChanged =
-      platform.onSettingsChanged?.(refreshAutoUpdatePreferences) ?? (() => {});
-
-    return () => {
-      disposed = true;
-      disposeSettingsChanged();
-    };
-  }, [platform]);
-
-  useEffect(() => {
     if (!releaseNotesCacheKey || !localizedUpdateReleaseNotes) {
       return;
     }
@@ -160,18 +131,6 @@ export function UpdateStatusDialogController({
       throw error;
     }
   }, [platform, setUpdateActionInFlight]);
-  const handleAutoDownloadAndInstallUpdatesChange = useCallback(
-    async (enabled: boolean) => {
-      setAutoDownloadAndInstallUpdates(enabled);
-      await platform.setAutoDownloadAndInstallUpdates?.(enabled);
-      if (enabled && updateState?.kind === "update-available") {
-        // 功能原因：用户在“已发现更新”弹窗里勾选自动下载时，期望当前版本也进入自动流程。
-        // 这里只触发同一个下载入口；真正是否下载、缓存命中和状态广播仍由 main 进程裁决。
-        await handleDownloadUpdate();
-      }
-    },
-    [handleDownloadUpdate, platform, updateState?.kind],
-  );
   const handleCancelDownload = useCallback(async () => {
     if (updateActionInFlightRef.current) {
       return;
@@ -282,13 +241,11 @@ export function UpdateStatusDialogController({
 
   return (
     <UpdateStatusDialog
-      autoDownloadAndInstallUpdates={autoDownloadAndInstallUpdates}
       displayVersion={displayVersion}
       edgeToEdge={edgeToEdge}
       intl={intl}
       isUpdateActionPending={updateActionInFlight !== null}
       localizedUpdateReleaseNotes={visibleUpdateReleaseNotes}
-      onAutoDownloadAndInstallUpdatesChange={handleAutoDownloadAndInstallUpdatesChange}
       onCancelDownload={handleCancelDownload}
       onDownloadUpdate={handleDownloadUpdate}
       onOpenChange={onOpenChange}

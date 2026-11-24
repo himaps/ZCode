@@ -39,6 +39,10 @@ import {
 
 const NO_FAMILIES: readonly ProviderFamilyDomain[] = [];
 
+// 离线 fork：内网无法连接模型厂商服务，隐藏整个预置厂商分组（含 start-plan 套餐），
+// 左侧导航只保留「自定义供应商」（docs/kylin-offline-divergences.md §1）。
+const FORK_OFFLINE_HIDE_PRESET_NAV_GROUP = true;
+
 interface PresetProviderWithConfig extends PresetProviderSpec {
   provider: ProviderSettingsFormProvider | null;
 }
@@ -192,6 +196,9 @@ export function useModelProviderNavigation({
   );
 
   const navigationGroups = useMemo<ModelProviderNavGroup[]>(() => {
+    // 离线 fork：内网无法连接模型厂商服务，预置厂商（含 Z.ai/BigModel 与套餐）在
+    // ModelProviderSection 里把 presetProviders 置空、start-plan 无权益，preset 分组自然为空，
+    // 这里过滤掉空分组，左侧导航只保留「自定义供应商」（docs/kylin-offline-divergences.md §1）。
     const groups: ModelProviderNavGroup[] = [
       {
         id: "preset",
@@ -237,7 +244,10 @@ export function useModelProviderNavigation({
       },
     ];
 
-    return groups;
+    // 离线 fork：隐藏预置厂商分组（含 start-plan）；其余场景过滤空分组避免渲染空标题。
+    return groups
+      .filter((group) => !FORK_OFFLINE_HIDE_PRESET_NAV_GROUP || group.id !== "preset")
+      .filter((group) => group.items.length > 0);
   }, [
     customProviders,
     codingPlanItems,

@@ -152,10 +152,13 @@ function buildDesktopWindowVisualOptions() {
 
   if (process.platform === "win32") {
     return {
-      backgroundColor: "#00000000",
+      // 离线 fork：首帧渲染前 Electron 用窗口宿主底色填充，原 #00000000（透明黑）会让
+      // frameless 窗口的合成器在标题栏区露出黑色底（左上角/顶部黑色卡顿）。改为不透明深色
+      // #1c1c1c（衔接静态启动屏 index.html 页面底色），并去掉 acrylic（不透明底色会覆盖
+      // 玻璃材质）——离线内网不追求透明，消除黑闪优先。docs/kylin-offline-divergences.md §1。
+      backgroundColor: "#1c1c1c",
       // Windows 窗口操作由 renderer 绘制，禁用原生标题栏，避免出现两套按钮。
       frame: false,
-      backgroundMaterial: "acrylic" as const,
     };
   }
 

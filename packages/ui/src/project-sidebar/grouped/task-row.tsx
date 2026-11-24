@@ -18,9 +18,7 @@ import {
   isTaskRowRenameBlockedTarget,
 } from "@/lib/taskListItemPresentation.js";
 import { buildTaskWorkspaceKey } from "@/lib/taskQueryCache.js";
-import { buildTaskFeedbackDescription } from "@/lib/taskFeedbackDraft.js";
 import { useTaskListItemContextActions } from "@/useTaskListItemContextActions.js";
-import { useFeedbackStore } from "@/feedback/feedbackStore.js";
 import {
   getTaskListAttention,
   getTaskListRowActivity,
@@ -243,7 +241,6 @@ function GroupedTaskRowComponent({
       typeof window.matchMedia === "function" &&
       window.matchMedia("(hover: none)").matches,
   );
-  const openFeedbackSubmit = useFeedbackStore((state) => state.openSubmit);
   const {
     taskSessionFile,
     taskNativeSessionLogFile,
@@ -303,31 +300,6 @@ function GroupedTaskRowComponent({
       return;
     }
     onMoveTaskToTop(task);
-  };
-  const handleOpenTaskFeedback = async () => {
-    openFeedbackSubmit({
-      title: intl
-        .formatMessage(
-          { id: "feedback.submit.template.section.taskFeedbackTitle" },
-          { title: taskTitle },
-        )
-        .slice(0, 80),
-      type: "bug",
-      module: "Agent任务执行失败",
-      severity: "P2-中",
-      includeLogs: true,
-      description: buildTaskFeedbackDescription({
-        taskTitle,
-        taskId: task.taskId,
-        workspacePath: task.workspacePath,
-        taskSessionPath: taskSessionFile.path,
-        taskLogPath: taskNativeSessionLogFile.path,
-        formatMessage: (id: string, values?: Record<string, string>) =>
-          intl.formatMessage({ id }, values),
-      }),
-      screenshots: [],
-    });
-    toast(intl.formatMessage({ id: "taskList.feedbackOpened" }));
   };
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.target !== event.currentTarget) {
@@ -521,7 +493,6 @@ function GroupedTaskRowComponent({
           onOpenTaskPathInFileManager={() => void handleOpenTaskPathInFileManager()}
           onCopyText={(label, text) => void handleCopyText(label, text)}
           onOpenProviderConfig={() => void handleOpenProviderConfig()}
-          onOpenTaskFeedback={() => void handleOpenTaskFeedback()}
           disabledReason={workspaceActionsDisabledReason}
           archiveDisabledReason={archiveDisabledReason}
         />

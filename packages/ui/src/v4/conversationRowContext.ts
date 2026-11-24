@@ -66,6 +66,8 @@ export interface ConversationRowRenderContext {
   messageStreamFirstReasoningRowId?: number;
   /** 常规设置：是否在对话消息流中渲染 Todo 工具卡片。 */
   messageStreamShowTodos?: boolean;
+  /** 离线 fork：复制/导出助手消息时是否包含思考/工作日志（默认 false = 只复制最终答案）。 */
+  includeThinkingInCopy?: boolean;
   /**
    * Tier 1 fork 跳转：把当前 pane 切到目标会话（forkNotice → 父会话，复用 onSessionCreated
    * 原地切换）。rowId 预留 Tier 2 精确滚动——当前 forkNotice.parentRowId 恒为 0 占位、暂忽略。

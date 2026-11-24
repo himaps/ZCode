@@ -23,7 +23,6 @@ import { isRendererReloadNavigation } from "@/lib/rendererNavigation.js";
 import { parseWslUncWorkspacePath } from "@/lib/wslUncWorkspace.js";
 import { logger } from "@/logger.js";
 import { toast } from "@/components/ui/toast.js";
-import { ensureTaskNavigationWorkspace } from "@/app-shell/taskNavigationWorkspace.js";
 import { useComposerClientNamespace } from "@/hooks/useServices.js";
 import {
   resolveComposerScope,
@@ -769,32 +768,6 @@ export function useRootWorkspaceActions({
     }
   }, [activeWorkspaceIdentity, activeWorkspacePath, tabStoreApi]);
 
-  // 设置页（分享管理）跳到指定会话：与自动化「打开会话」共用 workspace 解析，
-  // 远程 tab 未打开时 fail-closed，不凭 identity 伪造远程 tab。
-  const handleOpenTaskFromSettings = useCallback(
-    (target: { workspacePath: string; workspaceIdentity?: string; taskId: string }) => {
-      const workspaceResult = ensureTaskNavigationWorkspace({
-        workspacePath: target.workspacePath,
-        workspaceIdentity: target.workspaceIdentity,
-        activateTabByPath: (workspacePath, options) =>
-          tabStoreApi.getState().activateTabByPath(workspacePath, options),
-        addLocalWorkspaceTab: (workspacePath) => addTab(workspacePath),
-      });
-      if (!workspaceResult.accepted) {
-        logger.warn("[Root] open task from settings rejected", {
-          reason: workspaceResult.reason,
-        });
-        toast(intl.formatMessage({ id: "automations.runs.openSessionFailed" }));
-        return;
-      }
-      useZCodeSessionStore
-        .getState()
-        .setActiveTaskId(target.workspacePath, target.taskId, target.workspaceIdentity);
-      notifyTaskNavigationCommitted(target);
-    },
-    [addTab, intl, tabStoreApi],
-  );
-
   return {
     workspaceActionError,
     setWorkspaceActionError,
@@ -810,6 +783,5 @@ export function useRootWorkspaceActions({
     handleOpenFolderFromWorkspaceMenu,
     handleCreateTask,
     handleBackFromSettings,
-    handleOpenTaskFromSettings,
   };
 }

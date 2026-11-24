@@ -1318,13 +1318,16 @@ function ConversationTurnGroupImpl({
   const assistantTextTerminal =
     latestAssistantTextRow?.state === "complete" ||
     latestAssistantTextRow?.state === "interrupted";
+  const includeThinkingInCopy = context.includeThinkingInCopy === true;
   const assistantRawCopyText = useMemo(
-    () => (assistantTextTerminal ? resolveAssistantCopyText(unit) : undefined),
+    () =>
+      assistantTextTerminal ? resolveAssistantCopyText(unit, includeThinkingInCopy) : undefined,
     [
       assistantTextTerminal,
       unit.assistantTextRows,
       unit.assistantWorkRows,
       unit.latestAssistantTextRow,
+      includeThinkingInCopy,
     ],
   );
   const assistantFileSummaryText = useMemo(

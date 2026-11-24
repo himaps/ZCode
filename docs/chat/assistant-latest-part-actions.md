@@ -7,6 +7,12 @@ text part 时，不在中间 part 重复展示。
 ## 行为
 
 - Copy 复制该轮合并后的 assistant 正文，不只复制最后一个 part。
+- **离线 fork（复制/导出含思考过程开关）**：Copy 与「导出为 markdown」共用同一 `text`
+  （`resolveAssistantCopyText(unit, includeThinking)`）。受常规设置 `includeThinkingInCopy`
+  控制，**默认关闭 = 只复制最终答案**（本轮最后一条助手正文 `latestAssistantTextRow`），
+  不复制前面的工作日志/思考文本与「已工作/提示」汇总；开启后还原为合并整轮助手文本
+  （`assistantTextRows`）+ ExitPlanMode 计划正文（上游原行为）。开关在设置「Agent 行为」
+  段（i18n `settings.includeThinkingInCopy`）。详见 `docs/kylin-offline-divergences.md` §1。
 - 赞 / 踩是互斥反馈。再次点击当前选中项会清空反馈，点击另一项会直接切换。
 - 反馈通过 V4 `setAssistantFeedback` 写入 assistant message 的 `info.metadata.assistantFeedback`
   （transcript 是持久权威），再由 `AssistantFeedbackUpdated` 事件推进 live 投影；冷恢复在该消息的

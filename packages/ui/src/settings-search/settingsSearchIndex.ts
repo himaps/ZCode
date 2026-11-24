@@ -85,12 +85,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     visibility: "desktop",
   },
   {
-    id: "settings.autoDownloadAndInstallUpdates",
-    section: "general",
-    description: "settings.autoDownloadAndInstallUpdatesDescription",
-    visibility: "desktop",
-  },
-  {
     id: "settings.notification",
     section: "general",
     description: "settings.notificationDescription",
@@ -172,6 +166,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "settings.messageStreamShowTodos",
     section: "agentBehavior",
     description: "settings.messageStreamShowTodosDescription",
+    visibility: "all",
+  },
+  {
+    id: "settings.includeThinkingInCopy",
+    section: "agentBehavior",
+    description: "settings.includeThinkingInCopyDescription",
     visibility: "all",
   },
   {

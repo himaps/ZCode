@@ -74,10 +74,6 @@ import {
   useOptionalProjectDirectory,
 } from "@/project-sidebar/index.js";
 import { resolveRecentRemoteProjectPreference } from "@/project-sidebar/remote-project-connection.js";
-import {
-  SettingsShareManagement,
-  type SettingsShareTaskTarget,
-} from "@/conversation-share-interaction/SettingsShareManagement.js";
 import { ModelProviderSection } from "@/settings/ModelProviderSection.js";
 import { useEnterpriseCodingPlanProducts } from "@/settings/model-provider-section/useEnterpriseCodingPlanProducts.js";
 import { UsageStatsSection, type UsageStatsSectionTab } from "@/settings/UsageStatsSection.js";
@@ -312,7 +308,6 @@ export function SettingsPage({
   windowsWindowControlsRightPaddingPx: _windowsWindowControlsRightPaddingPx,
   captionWorkspacePath,
   onBack,
-  onOpenTask,
   onCreateTask,
   onOpenWorkspace,
   onOpenRemoteWorkspace,
@@ -328,8 +323,6 @@ export function SettingsPage({
   windowsWindowControlsRightPaddingPx?: number;
   captionWorkspacePath?: string | null;
   onBack?: () => void;
-  /** 设置页内跳转到指定会话（分享管理「跳转对话」）；Root 注入。 */
-  onOpenTask?: (target: SettingsShareTaskTarget) => void;
   onCreateTask?: (request?: CreateTaskRequest) => void;
   onOpenWorkspace?: () => void;
   onOpenRemoteWorkspace?: (preference?: RemoteConnectionOpenPreference) => void;
@@ -835,9 +828,9 @@ export function SettingsPage({
     setDesktopChromiumHardwareAccelerationEnabled,
   ] = useState(true);
   const [receivePreviewUpdates, setReceivePreviewUpdates] = useState(false);
-  const [autoDownloadAndInstallUpdates, setAutoDownloadAndInstallUpdates] = useState(false);
   const [messageStreamShowReasoning, setMessageStreamShowReasoning] = useState(true);
   const [messageStreamShowTodos, setMessageStreamShowTodos] = useState(false);
+  const [includeThinkingInCopy, setIncludeThinkingInCopy] = useState(false);
   const [zcodeInteractionBehavior, setZCodeInteractionBehavior] =
     useState<ZCodeInteractionBehavior>("queue");
   const [defaultHomeDir, setDefaultHomeDir] = useState("");
@@ -971,9 +964,9 @@ export function SettingsPage({
     }
     setMessageStreamShowReasoning(sharedSettings.messageStreamShowReasoning ?? true);
     setMessageStreamShowTodos(sharedSettings.messageStreamShowTodos ?? false);
+    setIncludeThinkingInCopy(sharedSettings.includeThinkingInCopy ?? false);
     setZCodeInteractionBehavior(sharedSettings.zcodeInteractionBehavior ?? "queue");
     setReceivePreviewUpdates(sharedSettings.receivePreviewUpdates ?? false);
-    setAutoDownloadAndInstallUpdates(sharedSettings.autoDownloadAndInstallUpdates ?? false);
   }, [sharedSettings]);
   const handleTerminalInheritSystemProfileChange = useCallback(
     async (enabled: boolean) => {
@@ -1309,22 +1302,6 @@ export function SettingsPage({
     },
     [updateSharedSettings],
   );
-  const handleAutoDownloadAndInstallUpdatesChange = useCallback(
-    async (enabled: boolean) => {
-      await runSettingsActionAsync({
-        featureId: "settings.update",
-        action: "toggle_auto_update",
-        trigger: "switch",
-        operation: () => updateSharedSettings({ autoDownloadAndInstallUpdates: enabled }),
-        completed: {
-          resultSource: "shared_settings",
-          stateAfter: enabled ? "enabled" : "disabled",
-        },
-      });
-      setAutoDownloadAndInstallUpdates(enabled);
-    },
-    [updateSharedSettings],
-  );
   const handleMessageStreamShowReasoningChange = useCallback(
     async (enabled: boolean) => {
       await runSettingsActionAsync({
@@ -1354,6 +1331,22 @@ export function SettingsPage({
         },
       });
       setMessageStreamShowTodos(enabled);
+    },
+    [updateSharedSettings],
+  );
+  const handleIncludeThinkingInCopyChange = useCallback(
+    async (enabled: boolean) => {
+      await runSettingsActionAsync({
+        featureId: "settings.conversation",
+        action: "toggle_include_thinking_in_copy",
+        trigger: "switch",
+        operation: () => updateSharedSettings({ includeThinkingInCopy: enabled }),
+        completed: {
+          resultSource: "shared_settings",
+          stateAfter: enabled ? "enabled" : "disabled",
+        },
+      });
+      setIncludeThinkingInCopy(enabled);
     },
     [updateSharedSettings],
   );
@@ -1794,7 +1787,6 @@ export function SettingsPage({
                                 desktopChromiumHardwareAccelerationEnabled
                               }
                               receivePreviewUpdates={receivePreviewUpdates}
-                              autoDownloadAndInstallUpdates={autoDownloadAndInstallUpdates}
                               dataBaseDir={dataBaseDir}
                               terminalInheritSystemProfile={terminalInheritSystemProfile}
                               terminalFontFamily={terminalFontFamily}
@@ -1852,9 +1844,6 @@ export function SettingsPage({
                                 handleDesktopChromiumHardwareAccelerationChange
                               }
                               onReceivePreviewUpdatesChange={handleReceivePreviewUpdatesChange}
-                              onAutoDownloadAndInstallUpdatesChange={
-                                handleAutoDownloadAndInstallUpdatesChange
-                              }
                               onOpenOnboardingDialog={() =>
                                 runUserAction({
                                   input: {
@@ -1878,6 +1867,7 @@ export function SettingsPage({
                               }
                               messageStreamShowReasoning={messageStreamShowReasoning}
                               messageStreamShowTodos={messageStreamShowTodos}
+                              includeThinkingInCopy={includeThinkingInCopy}
                               zcodeInteractionBehavior={zcodeInteractionBehavior}
                               askUserQuestionAutoResolutionEnabled={
                                 askUserQuestionAutoResolutionEnabled
@@ -1887,6 +1877,7 @@ export function SettingsPage({
                                 handleMessageStreamShowReasoningChange
                               }
                               onMessageStreamShowTodosChange={handleMessageStreamShowTodosChange}
+                              onIncludeThinkingInCopyChange={handleIncludeThinkingInCopyChange}
                               onZCodeInteractionBehaviorChange={
                                 handleZCodeInteractionBehaviorChange
                               }
@@ -2150,12 +2141,6 @@ export function SettingsPage({
                               />
                               <ArchiveManagement />
                             </div>
-                          ) : activeSection === "shares" ? (
-                            <SettingsShareManagement
-                              signedIn={Boolean(user)}
-                              onLogin={onLogin}
-                              onOpenTask={onOpenTask}
-                            />
                           ) : activeSection === "usage" ? (
                             <UsageStatsSection
                               activeTab={usageActiveTab}

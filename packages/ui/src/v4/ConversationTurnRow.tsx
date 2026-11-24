@@ -70,9 +70,19 @@ export function ConversationTurnRow({
   );
 }
 
-export function resolveAssistantCopyText(unit: ConversationTurnRenderUnit): string | undefined {
+export function resolveAssistantCopyText(
+  unit: ConversationTurnRenderUnit,
+  includeThinking: boolean,
+): string | undefined {
   if (!unit.latestAssistantTextRow) {
     return undefined;
+  }
+
+  // 离线 fork：默认（includeThinking=false）只复制最终答案（本轮最后一条助手正文），
+  // 不复制前面的工作日志/思考文本；开启后才合并整轮助手文本与计划正文
+  // （docs/kylin-offline-divergences.md §1）。
+  if (!includeThinking) {
+    return unit.latestAssistantTextRow.text;
   }
 
   const segments =

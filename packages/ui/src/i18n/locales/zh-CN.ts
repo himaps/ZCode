@@ -3692,6 +3692,9 @@ const zhCN: Record<string, string> = {
     "在消息流中展示完整的模型思考内容；关闭时每轮仍展示第一次思考。",
   "settings.messageStreamShowTodos": "显示待办",
   "settings.messageStreamShowTodosDescription": "在消息流中展示 Todo 工具卡片。",
+  "settings.includeThinkingInCopy": "复制/导出时包含思考过程",
+  "settings.includeThinkingInCopyDescription":
+    "开启后，复制和「导出为 markdown」会连同前面的工作日志/思考内容一起；默认关闭，只复制最终答案。",
   "settings.zcodeInteractionBehavior": "交互行为",
   "settings.zcodeInteractionBehaviorDescription":
     "在 ZCode 运行时将后续操作加入队列，或引导至下一轮工具调用后运行。",

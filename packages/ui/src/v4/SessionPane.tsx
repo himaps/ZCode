@@ -395,6 +395,11 @@ import {
   type ConversationSelectionReference,
 } from "@/lib/conversationSelectionReference.js";
 
+// 离线 fork：会话内「分享对话」依赖云端分享服务器，内网不可达。用构建级常量禁用
+// 会话内分享入口（分享气泡 + 选择面板），保留底层 state/handler 引用以缩小合并面
+// （docs/kylin-offline-divergences.md §1）。
+const FORK_OFFLINE_DISABLE_CONVERSATION_SHARE = true;
+
 export interface SessionPaneProps {
   paneId: string;
   sessionId: string | null;
@@ -2183,6 +2188,8 @@ export function SessionPane({
   const appFollowupMode = resolveAppFollowupMode(sharedSettings);
   const messageStreamShowReasoning = sharedSettings?.messageStreamShowReasoning ?? true;
   const messageStreamShowTodos = sharedSettings?.messageStreamShowTodos ?? false;
+  // 离线 fork：复制/导出是否包含思考/工作日志（默认 false = 只复制最终答案）。
+  const includeThinkingInCopy = sharedSettings?.includeThinkingInCopy ?? false;
   const snapshotSessionId = snapshot?.sessionId ?? null;
   const snapshotFollowupMode = snapshot?.config.followupMode ?? null;
   const snapshotRevision = snapshot?.revision ?? null;
@@ -3247,6 +3254,7 @@ export function SessionPane({
       chatLoadingBlockedByInteraction,
       messageStreamShowReasoning,
       messageStreamShowTodos,
+      includeThinkingInCopy,
       onNavigateToRow: handleNavigateToRow,
       onOpenBrowserUrl,
       onOpenAutomationsMain,
@@ -3323,6 +3331,7 @@ export function SessionPane({
       chatLoadingBlockedByInteraction,
       messageStreamShowReasoning,
       messageStreamShowTodos,
+      includeThinkingInCopy,
       handleNavigateToRow,
       onOpenBrowserUrl,
       onOpenAutomationsMain,
@@ -6679,7 +6688,7 @@ export function SessionPane({
             compactForRemoteControl && "min-w-0",
           )}
         >
-          {sessionId && !compactForRemoteControl ? (
+          {!FORK_OFFLINE_DISABLE_CONVERSATION_SHARE && sessionId && !compactForRemoteControl ? (
             <ConversationSharePopover
               key={sessionId}
               sessionId={sessionId}
@@ -6692,18 +6701,20 @@ export function SessionPane({
               {sharePopoverContent}
             </ConversationSharePopover>
           ) : null}
-          <ConversationShareSelectionPanel
-            visible={shareSelectionPanelVisible}
-            items={shareItems}
-            selectedRowIds={pendingShareRowIds}
-            selectedCount={pendingShareTurnCount}
-            preflight={sharePreflight}
-            onSelectAllChange={handleSelectAllShareRows}
-            onToggle={handleShareSelectionToggle}
-            onInspect={handleShareSelectionInspect}
-            onConfirm={handleConfirmShareSelection}
-            onCancel={dismissShareSelectionPanel}
-          />
+          {!FORK_OFFLINE_DISABLE_CONVERSATION_SHARE ? (
+            <ConversationShareSelectionPanel
+              visible={shareSelectionPanelVisible}
+              items={shareItems}
+              selectedRowIds={pendingShareRowIds}
+              selectedCount={pendingShareTurnCount}
+              preflight={sharePreflight}
+              onSelectAllChange={handleSelectAllShareRows}
+              onToggle={handleShareSelectionToggle}
+              onInspect={handleShareSelectionInspect}
+              onConfirm={handleConfirmShareSelection}
+              onCancel={dismissShareSelectionPanel}
+            />
+          ) : null}
           {!isDraft ? (
             <ConversationStatusPanel
               workspacePath={workspacePath}
