@@ -97,12 +97,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     visibility: "all",
   },
   {
-    id: "settings.mobilePush",
-    section: "general",
-    description: "settings.mobilePushDescription",
-    visibility: "desktop",
-  },
-  {
     id: "settings.closeToTrayOnWindows",
     section: "general",
     description: "settings.closeToTrayUnavailable",
